@@ -92,8 +92,35 @@ export async function getDemoObserverKey(): Promise<string | null> {
   return null;
 }
 
+// Phase 4: Module-level cache to avoid repeated DB queries on every API
+// request (audit NEW-21). The demo merchant + account rarely change after
+// first boot, so we cache them in-process. Cache invalidated on explicit
+// reset or server restart.
+let cachedMerchant: any = null;
+let cachedAccount: any = null;
+let cachePromise: Promise<{ merchant: any; account: any }> | null = null;
+
 export async function getDemoMerchant() {
-  const m = await ensureDemoMerchant();
-  const account = await db.receivingAccount.findFirst({ where: { merchantId: m.id } });
-  return { merchant: m, account };
+  if (cachedMerchant && cachedAccount) {
+    return { merchant: cachedMerchant, account: cachedAccount };
+  }
+  // Dedupe concurrent calls — only one fetch in-flight at a time
+  if (cachePromise) return cachePromise;
+  cachePromise = (async () => {
+    const m = await ensureDemoMerchant();
+    const account = await db.receivingAccount.findFirst({ where: { merchantId: m.id } });
+    cachedMerchant = m;
+    cachedAccount = account;
+    cachePromise = null;
+    return { merchant: m, account };
+  })();
+  return cachePromise;
 }
+
+/** Force re-fetch on next call (e.g., after branding change). */
+export function invalidateDemoMerchantCache() {
+  cachedMerchant = null;
+  cachedAccount = null;
+  cachePromise = null;
+}
+
