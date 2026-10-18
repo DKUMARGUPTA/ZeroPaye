@@ -116,7 +116,31 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply overflow-x-hidden scroll-smooth;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground overflow-x-hidden;
+    /* Phase 3: prevent horizontal scroll on mobile from decorative gradient divs */
+    -webkit-text-size-adjust: 100%;
+  }
+  /* Phase 3: visible focus ring for keyboard navigation (accessibility) */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-teal-500;
+  }
+  /* Custom scrollbar for overflow areas */
+  .scroll-area::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-area::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  .scroll-area::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
   }
 }
