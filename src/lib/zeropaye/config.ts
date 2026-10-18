@@ -25,7 +25,8 @@ export async function ensureDemoMerchant() {
         businessName: DEMO_MERCHANT.businessName,
         publicApiKey: generateApiKey(),
         adminApiKey: generateApiKey(),
-        webhookSecret: generateSecret(32),
+        // D8 fix: allow ZEROPAYE_WEBHOOK_SECRET env var to override auto-generated secret
+        webhookSecret: process.env.ZEROPAYE_WEBHOOK_SECRET || generateSecret(32),
         branding: JSON.stringify({
           brandName: DEMO_MERCHANT.brandName,
           tagline: DEMO_MERCHANT.tagline,
