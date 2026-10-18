@@ -18,6 +18,10 @@ Paisa seedhe customer se aapke bank account mein — koi beech ka dalaal nahi, k
 
 <br/>
 
+<img src="public/screenshots/zeropaye-hero.png" alt="ZeroPaye Hero Banner" width="100%"/>
+
+<br/>
+
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org)
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?style=for-the-badge&logo=prisma)](https://prisma.io)
@@ -36,13 +40,112 @@ Paisa seedhe customer se aapke bank account mein — koi beech ka dalaal nahi, k
 
 ## 📖 Yeh README kisse hai? (Who is this README for?)
 
-Yeh README sabke liye hai — chahe aap **chhote dukaandaar** ho, **freelancer** ho, **startup founder** ho, ya **developer** jo isko apne website pe integrate karna chahte ho. Humne ise aaram se, step-by-step, simple Hindi-English mix mein likha hai taaki koi bhi aaram se samjh sake aur use kar sake.
+Yeh README sabke liye hai — chahe aap **chhote dukaandaar** ho, **freelancer** ho, **startup founder** ho, ya **developer** jo isko apne website pe integrate karna chahte ho. Humne ise aaram se, step-by-step, simple Hindi-English mix mein likha hai taaki koi bhi aaram se samjh sake aur use kar sake. **Har section ke saath real screenshots** diye hain taaki aap dekh sakein ki ZeroPaye aasal mein kaisa dikhta hai aur kaise kaam karta hai.
 
-**Agar aap:** 
+**Agar aap:**
 - 🏪 ek dukaandaar hain jo 2-3% fees save karna chahte ho → [**"Mujhe kya fayda?"**](#-mujhe-kya-fayda-why-should-i-care) padhein
 - 👨‍💻 ek developer ho jo integrate karna chahte ho → [**"Developer Guide"**](#-developer-guide-5-minute-mein-integrate) seedha padhein
 - 🔍 bas dekhna chahte ho ki yeh kya hai → [**"ZeroPaye kya hai?"**](#-zeropaye-kya-hai-what-is-zeropaye) se start karein
+- 👀 live dekhna chahte ho ki kaise dikhta hai → [**"Screenshots"**](#-screenshots-dekhein) se start karein
 - 🚀 abhi live demo try karna chahte ho → [Preview Panel](#-live-demo-try-karein) mein dekhein
+
+<br/>
+
+---
+
+## 📸 Screenshots dekhein
+
+### 🏠 Main Landing Page
+
+Pura ZeroPaye page ek hi scroll mein — hero, acronym, comparison, demo, dashboard, security, developer, free-forever — sab kuch.
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="public/screenshots/01-hero.png" alt="Hero section" width="100%"/>
+      <br/><sub><b>Hero Section</b> — ZeroPaye branding + stats</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="public/screenshots/02-acronym.png" alt="Z-E-R-O-Paye acronym" width="100%"/>
+      <br/><sub><b>Z-E-R-O-Payé Acronym</b> — 5 pillar cards</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="public/screenshots/04-comparison.png" alt="Comparison table" width="100%"/>
+      <br/><sub><b>Comparison Table</b> — Traditional vs ZeroPaye</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="public/screenshots/05-dashboard.png" alt="Merchant dashboard" width="100%"/>
+      <br/><sub><b>Merchant Dashboard</b> — Live transactions + stats</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="public/screenshots/06-security.png" alt="Security section" width="100%"/>
+      <br/><sub><b>Security by Design</b> — Audit fixes showcased</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="public/screenshots/07-developer.png" alt="Developer section" width="100%"/>
+      <br/><sub><b>Developer Guide</b> — Code samples</sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="public/screenshots/08-free-forever.png" alt="Free Forever" width="70%"/>
+  <br/><sub><b>Free Forever</b> — ₹0 pricing, no catch</sub>
+</p>
+
+<br/>
+
+---
+
+## 🔄 Live Checkout Flow — Step-by-step screenshots
+
+Yeh woh section hai jahan customer aapke store par checkout karta hai. Har step ka **real screenshot** niche diya gaya hai — phone mockup mein dekh sakte ho ki customer ko kya dikhta hai.
+
+### Step 1: 🛒 Cart (Order summary)
+Customer amount dekhta hai, "Pay Securely" click karta hai.
+
+<p align="center">
+  <img src="public/screenshots/09-checkout-01-cart.png" alt="Checkout step 1 - Cart" width="80%"/>
+</p>
+
+### Step 2: 📱 Mobile number input
+Customer apna 10-digit mobile number daalta hai. ZeroPaye is number ko **gateway-owned** rakhta hai — merchant ko nahi pata.
+
+<p align="center">
+  <img src="public/screenshots/09-checkout-02-mobile.png" alt="Checkout step 2 - Mobile" width="80%"/>
+</p>
+
+### Step 3: 🔐 WhatsApp OTP verification
+6-digit OTP customer ke WhatsApp par jaata hai (demo mode mein screen pe dikhta hai, production mein real WhatsApp pe).
+
+<p align="center">
+  <img src="public/screenshots/09-checkout-03-otp.png" alt="Checkout step 3 - OTP" width="80%"/>
+</p>
+
+### Step 4: 📲 QR code + 5-minute payment window
+OTP verify hote hi **pure vector SVG QR** dikhta hai + 5-minute countdown timer. Customer kisi bhi UPI app se scan karke pay karta hai (GPay, PhonePe, Paytm, BHIM, CRED, Amazon Pay).
+
+<p align="center">
+  <img src="public/screenshots/09-checkout-04-qr.png" alt="Checkout step 4 - QR" width="80%"/>
+</p>
+
+### Step 5: ⏳ Verifying (30-second window)
+Customer "I've Paid" click karta hai → 30-second verification window shuru hoti hai. Banking observer SMS/email padhke payment detect karta hai.
+
+<p align="center">
+  <img src="public/screenshots/09-checkout-05-verifying.png" alt="Checkout step 5 - Verifying" width="80%"/>
+</p>
+
+### Step 6: ✅ Payment Successful (UTR generated)
+Bank credit verify hote hi **SUCCESS** screen dikhta hai with **12-digit UTR** (bank reference number). Customer ko order confirm ka message jaata hai.
+
+<p align="center">
+  <img src="public/screenshots/09-checkout-06-success.png" alt="Checkout step 6 - Success" width="80%"/>
+</p>
 
 <br/>
 
@@ -58,7 +161,7 @@ Yeh README sabke liye hai — chahe aap **chhote dukaandaar** ho, **freelancer**
 > **ZeroPaye mein:** Customer ₹100 deta hai → seedhe aapke bank account mein ₹100 milta hai, **turant**, bina kisi fee ke.
 
 ### Yeh kaise possible hai?
-ZeroPaye koi "aggregator" nahi hai. Yeh ek **software** hai jo aap apne server pe chalate ho. Yeh customer ko UPI QR dikhata hai (jaise GPay/PhonePe ka QR), aur jab customer pays karta hai toh bank ka SMS/email notification padhke payment verify karta hai. Paisa seedha aapke bank mein jaata hai — ZeroPaye beech mein aata hi nahi.
+ZeroPaye koi "aggregator" nahi hai. Yeh ek **software** hai jo aap apne server pe chalate ho. Yeh customer ko UPI QR dikhata hai (jaise GPay/PhonePe ka QR), aur jab customer pays karta hai toh bank ka SMS/email notification padhke payment verify karta hai. Paisa seedhe aapke bank mein jaata hai — ZeroPaye beech mein aata hi nahi.
 
 <br/>
 
@@ -102,6 +205,27 @@ ZeroPaye koi "aggregator" nahi hai. Yeh ek **software** hai jo aap apne server p
 
 ---
 
+## 🚀 Live Demo try karein
+
+Is page mein **poora interactive checkout demo** hai (koi signup nahi chahiye). Upar diye screenshots ko live reproduce kar sakte ho:
+
+### Demo kaise chalayein (Step-by-step):
+
+1. **"Try the Live Checkout Demo"** button par click karein (page ke top-right mein, ya "Live Demo" nav mein)
+2. **Amount** daalein (e.g., `499`) aur **"Pay Securely"** click karein
+3. **10-digit mobile number** daalein (e.g., `9876543210`)
+4. **"Send WhatsApp OTP"** click karein
+5. **6-digit OTP** screen pe dikhega (demo mode mein — production mein real WhatsApp pe jaata hai)
+6. Wahi OTP daalkar **"Verify & Continue"** karein
+7. **QR code** dikhega + 5-minute timer. Kisi bhi UPI app se "scan" karke pay kar sakte ho
+8. **"I've Paid — Verify Now"** click karein (30-second verify window start hoti hai)
+9. **"Simulate bank credit"** click karein (yeh ek fake bank SMS mimic karta hai — real deployment mein Android app automatic karta hai)
+10. 🎉 **"Payment Successful"** + UTR (12-digit bank reference number) dikhega!
+
+<br/>
+
+---
+
 ## 🔒 Kya yeh safe hai? (Is this secure?)
 
 **Haan, bilkul.** Humne ZeroPaye ko ek **pura security audit** ke baad banaya hai. Original code (YouPI-PG) mein 105 issues mile the (13 CRITICAL) — humne sab fix kiye:
@@ -124,36 +248,6 @@ ZeroPaye koi "aggregator" nahi hai. Yeh ek **software** hai jo aap apne server p
 - ✅ **9 of 13 HIGH findings** FULLY FIXED
 - ✅ All 4 NEW CRITICAL findings (found in v1.0) FIXED in v1.0.1
 - ⚠️ 2 PARTIAL fixes (observer key persistence, webhook retry worker) — see [Production Notes](#-production-notes)
-
-<br/>
-
----
-
-## 🚀 Live Demo try karein
-
-Is page mein **poora interactive checkout demo** hai (koi signup nahi chahiye):
-
-### Demo kaise chalayein (Step-by-step):
-
-1. **"Try the Live Checkout Demo"** button par click karein (page ke top-right mein, ya "Live Demo" nav mein)
-2. **Amount** daalein (e.g., `499`) aur **"Pay Securely"** click karein
-3. **10-digit mobile number** daalein (e.g., `9876543210`)
-4. **"Send WhatsApp OTP"** click karein
-5. **6-digit OTP** screen pe dikhega (demo mode mein — production mein real WhatsApp pe jaata hai)
-6. Wahi OTP daalkar **"Verify & Continue"** karein
-7. **QR code** dikhega + 5-minute timer. Kisi bhi UPI app se "scan" karke pay kar sakte ho
-8. **"I've Paid — Verify Now"** click karein (30-second verify window start hoti hai)
-9. **"Simulate bank credit"** click karein (yeh ek fake bank SMS mimic karta hai — real deployment mein Android app automatic karta hai)
-10. 🎉 **"Payment Successful"** + UTR (12-digit bank reference number) dikhega!
-
-### Kya-kya dekhein:
-- 🎨 **Acronym section**: Z-E-R-O-Payé ke 5 pillar cards
-- 📊 **Comparison table**: Traditional vs ZeroPaye
-- 📱 **Interactive phone mockup**: Live checkout flow
-- 📈 **Merchant dashboard**: Live transactions, VPA slot, observer health, white-label branding (4 tabs)
-- 🔐 **Security section**: Har audit fix before/after ke saath
-- 💻 **Developer section**: Copyable code snippets (HTML, JS, Node, Python webhooks)
-- 🆓 **Free Forever section**: ₹0 pricing
 
 <br/>
 
@@ -339,64 +433,6 @@ async def zeropaye_webhook(request: Request):
 
 ---
 
-## 📂 Project Structure (Code kya-kya hai)
-
-```
-ZeroPaye/
-├── prisma/
-│   └── schema.prisma              # Database design (9 secure tables)
-│
-├── src/
-│   ├── lib/zeropaye/              # Core utilities (yahan se shuru karein padhna)
-│   │   ├── crypto.ts              # Secure random, HMAC, SHA-256 (NO Math.random)
-│   │   ├── money.ts               # Integer-paise arithmetic (₹1 = 100 paise)
-│   │   ├── upi.ts                 # UPI URI builder + validators
-│   │   ├── qr.ts                  # Pure vector SVG QR generator
-│   │   ├── security.ts           # Rate-limit, SSRF guard, IP helper
-│   │   ├── otp-store.ts          # Hashed OTP + 15-min lockout
-│   │   ├── admin-auth.ts         # Admin API key verification
-│   │   └── config.ts             # Demo merchant seeding (no hardcoded PII)
-│   │
-│   ├── app/api/zeropaye/         # 10 API endpoints
-│   │   ├── bootstrap/route.ts    # [Dev-only] Get admin key for demo
-│   │   ├── session/route.ts      # Create/list sessions (admin-auth for GET)
-│   │   ├── send-otp/route.ts     # Send OTP (rate-limited)
-│   │   ├── verify-otp/route.ts   # Verify OTP (race-safe slot acquisition)
-│   │   ├── status/[id]/route.ts  # Get status + auto-expire + queue promote
-│   │   ├── confirm-paid/route.ts # Customer clicked "I've Paid"
-│   │   ├── simulate-payment/    # [Dev-only] Simulate bank credit (admin-auth)
-│   │   ├── observer/route.ts     # HMAC-signed observer ingestion
-│   │   ├── merchant/route.ts     # Dashboard stats (admin-auth)
-│   │   └── qr/[id]/route.ts      # Generate vector SVG QR
-│   │
-│   ├── components/zeropaye/      # UI components (React + shadcn/ui + Framer Motion)
-│   │   ├── header.tsx           # Sticky nav + theme toggle
-│   │   ├── hero.tsx             # Hero section
-│   │   ├── acronym.tsx          # Z-E-R-O-Payé 5 pillars
-│   │   ├── comparison.tsx       # Traditional vs ZeroPaye table
-│   │   ├── checkout-demo.tsx    # Interactive phone mockup
-│   │   ├── dashboard.tsx        # Live merchant dashboard
-│   │   ├── security.tsx         # Audit fixes showcase
-│   │   ├── features.tsx         # 12 superpowers grid
-│   │   ├── developer.tsx        # Code samples
-│   │   ├── free-forever.tsx     # ₹0 pricing
-│   │   ├── footer.tsx           # Sticky footer
-│   │   └── zeropaye-icons.tsx   # Custom SVG icons
-│   │
-│   ├── app/page.tsx             # Main page (saab sections yahan)
-│   └── app/layout.tsx            # Root layout + metadata
-│
-├── .env.example                  # Environment template
-├── .gitignore                    # Kya-kya commit nahi karna
-├── LICENSE                       # AGPL-3.0 full text
-├── README.md                     # Yeh file!
-└── package.json                  # Dependencies + scripts
-```
-
-<br/>
-
----
-
 ## 🏛️ Architecture (Kaise kaam karta hai)
 
 ### Simple flow:
@@ -477,7 +513,7 @@ INITIATED → AUTH_PENDING → AUTHENTICATED → (ACTIVE | QUEUED)
 | NEW-01 | CRITICAL | simulate-payment unauthenticated | ✅ Disabled in prod + admin key required (v1.0.1) |
 | NEW-02 | CRITICAL | False "admin authenticated" claim | ✅ adminApiKey now actually verified (v1.0.1) |
 | NEW-03 | HIGH | GET /session + /merchant leak data | ✅ Admin auth added (v1.0.1) |
-| NEW-04 | HIGH | Observer marks expired sessions SUCCESS | ✅ Status filter added (v1.0.1) |
+| NEW-04 | HIGH | Observer marks expired sessions | ✅ Status filter added (v1.0.1) |
 | NEW-05 | HIGH | Cross-tenant observer injection | ✅ Device-merchant match check (v1.0.1) |
 | NEW-06 | HIGH | verify-otp race condition | ✅ Conditional updateMany (v1.0.1) |
 | NEW-07 | HIGH | simulate-payment double-confirm race | ✅ Conditional updateMany (v1.0.1) |
@@ -549,6 +585,70 @@ ZeroPaye v1.0.1 **demo ke liye fully ready hai**, lekin production deployment se
 ### Kya nahi kar sakte:
 - ❌ **Closed-source fork sell** — AGPL code ko proprietary bana kar bech nahi sakte
 - ❌ **Remove attribution in source** — License headers remove nahi kar sakte (lekin white-label UI mein "Powered by ZeroPaye" hatane ki zarurat nahi)
+
+<br/>
+
+---
+
+## 📂 Project Structure (Code kya-kya hai)
+
+```
+ZeroPaye/
+├── prisma/
+│   └── schema.prisma              # Database design (9 secure tables)
+│
+├── public/
+│   └── screenshots/               # Real screenshots used in README
+│       ├── zeropaye-hero.png      # AI-generated hero banner
+│       ├── 01-hero.png ... 08-free-forever.png  # Section screenshots
+│       └── 09-checkout-01 ... 09-checkout-06.png  # Checkout flow steps
+│
+├── src/
+│   ├── lib/zeropaye/              # Core utilities (yahan se shuru karein padhna)
+│   │   ├── crypto.ts              # Secure random, HMAC, SHA-256 (NO Math.random)
+│   │   ├── money.ts               # Integer-paise arithmetic (₹1 = 100 paise)
+│   │   ├── upi.ts                 # UPI URI builder + validators
+│   │   ├── qr.ts                  # Pure vector SVG QR generator
+│   │   ├── security.ts           # Rate-limit, SSRF guard, IP helper
+│   │   ├── otp-store.ts          # Hashed OTP + 15-min lockout
+│   │   ├── admin-auth.ts         # Admin API key verification
+│   │   └── config.ts             # Demo merchant seeding (no hardcoded PII)
+│   │
+│   ├── app/api/zeropaye/         # 10 API endpoints
+│   │   ├── bootstrap/route.ts    # [Dev-only] Get admin key for demo
+│   │   ├── session/route.ts      # Create/list sessions (admin-auth for GET)
+│   │   ├── send-otp/route.ts     # Send OTP (rate-limited)
+│   │   ├── verify-otp/route.ts   # Verify OTP (race-safe slot acquisition)
+│   │   ├── status/[id]/route.ts  # Get status + auto-expire + queue promote
+│   │   ├── confirm-paid/route.ts # Customer clicked "I've Paid"
+│   │   ├── simulate-payment/    # [Dev-only] Simulate bank credit (admin-auth)
+│   │   ├── observer/route.ts     # HMAC-signed observer ingestion
+│   │   ├── merchant/route.ts     # Dashboard stats (admin-auth)
+│   │   └── qr/[id]/route.ts      # Generate vector SVG QR
+│   │
+│   ├── components/zeropaye/      # UI components (React + shadcn/ui + Framer Motion)
+│   │   ├── header.tsx           # Sticky nav + theme toggle
+│   │   ├── hero.tsx             # Hero section
+│   │   ├── acronym.tsx          # Z-E-R-O-Payé 5 pillars
+│   │   ├── comparison.tsx       # Traditional vs ZeroPaye table
+│   │   ├── checkout-demo.tsx    # Interactive phone mockup
+│   │   ├── dashboard.tsx        # Live merchant dashboard
+│   │   ├── security.tsx         # Audit fixes showcase
+│   │   ├── features.tsx         # 12 superpowers grid
+│   │   ├── developer.tsx        # Code samples
+│   │   ├── free-forever.tsx     # ₹0 pricing
+│   │   ├── footer.tsx           # Sticky footer
+│   │   └── zeropaye-icons.tsx   # Custom SVG icons
+│   │
+│   ├── app/page.tsx             # Main page (saab sections yahan)
+│   └── app/layout.tsx            # Root layout + metadata
+│
+├── .env.example                  # Environment template
+├── .gitignore                    # Kya-kya commit nahi karna
+├── LICENSE                       # AGPL-3.0 full text
+├── README.md                     # Yeh file!
+└── package.json                  # Dependencies + scripts
+```
 
 <br/>
 
