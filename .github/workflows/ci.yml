@@ -1,0 +1,49 @@
+name: ZeroPaye CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: Lint + Typecheck + Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint (ESLint)
+        run: bun run lint
+
+      - name: Test (Vitest)
+        run: bun run test
+        env:
+          DATABASE_URL: "file:./test.db"
+          NODE_ENV: test
+
+      - name: Test coverage report
+        run: bun run test:coverage
+        env:
+          DATABASE_URL: "file:./test-coverage.db"
+          NODE_ENV: test
+        continue-on-error: true # coverage is informational
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
