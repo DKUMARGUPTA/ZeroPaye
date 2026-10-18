@@ -41,12 +41,13 @@ export async function POST(req: NextRequest) {
     // HMAC verify — constant time. The signed payload is "<timestamp>.<rawBody>"
     const rawBody = await req.text();
     const signedPayload = `${timestamp}.${rawBody}`;
-    // device.signingKeyHash stores SHA-256 of the secret. We do NOT have the plaintext
-    // here — in production the device keeps the secret; the server stores only the
-    // hash. For this demo endpoint we verify against a per-process demo secret.
-    const demoSecret = process.env.DEMO_DEVICE_SIGNING_KEY;
+    // Audit NEW-09: read the demo signing key from a persisted sidecar file
+    // (survives restarts). In production, the device keeps the secret; the
+    // server stores only the public key / hash.
+    const { getDemoObserverKey } = await import("@/lib/zeropaye/config");
+    const demoSecret = await getDemoObserverKey();
     if (!demoSecret) {
-      return jsonErr(500, "Observer secret not provisioned");
+      return jsonErr(500, "Observer secret not provisioned (run the demo first)");
     }
     // Verify device signing key hash matches (ensures the demo device is the right one)
     if (!safeEqual(device.signingKeyHash, sha256Hex(demoSecret))) {
@@ -82,12 +83,21 @@ export async function POST(req: NextRequest) {
     const account = await db.receivingAccount.findUnique({ where: { id: receivingAccountId } });
     if (!account) return jsonErr(404, "Receiving account not found");
 
+    // Audit NEW-05: device must belong to the same merchant as the receiving account
+    if (device.merchantId !== account.merchantId) {
+      return jsonErr(403, "Device not authorized for this receiving account");
+    }
+
     const ip = await getClientIp();
 
-    // Find the matching ACTIVE/PROCESSING session (NO global fallback — S21 fix)
+    // Find the matching ACTIVE/PROCESSING session.
+    // Audit NEW-04: even when paymentSessionId is provided, enforce status filter
+    // so an EXPIRED/FAILED/SUCCESS session cannot be re-confirmed.
     let session = null;
     if (paymentSessionId) {
-      session = await db.paymentSession.findUnique({ where: { id: paymentSessionId } });
+      session = await db.paymentSession.findFirst({
+        where: { id: paymentSessionId, receivingAccountId, status: { in: ["ACTIVE", "PROCESSING"] } },
+      });
     } else {
       session = await db.paymentSession.findFirst({
         where: { receivingAccountId, status: { in: ["ACTIVE", "PROCESSING"] } },

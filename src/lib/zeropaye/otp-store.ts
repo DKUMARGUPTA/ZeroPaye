@@ -34,12 +34,14 @@ export function issueOtp(mobile: string): { otp: string; resendInMs: number } | 
     return { error: "cooldown", resendInMs: RESEND_COOLDOWN_MS - (now - existing.lastSentAt) };
   }
   const otp = generateOtp(6);
+  // Audit NEW-15: preserve accumulated attempts + lockout state across resends
+  // so an attacker can't reset their brute-force counter by requesting a new OTP.
   const rec: OtpRecord = {
     mobile,
     hash: sha256Hex(otp),
     expiresAt: now + OTP_TTL_MS,
-    attempts: 0,
-    lockedUntil: 0,
+    attempts: existing?.attempts ?? 0,
+    lockedUntil: existing?.lockedUntil ?? 0,
     lastSentAt: now,
   };
   OTPS.set(mobile, rec);

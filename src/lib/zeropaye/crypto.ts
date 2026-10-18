@@ -39,7 +39,9 @@ export function hmacSha256(secret: string, payload: string | Buffer): string {
 export function verifyHmac(secret: string, payload: string | Buffer, signature: string): boolean {
   try {
     const expected = hmacSha256(secret, payload);
-    return safeEqual(expected, String(signature || ""));
+    // Accept signatures with or without "sha256=" prefix (client convention flexibility)
+    const sig = String(signature || "").replace(/^sha256=/i, "");
+    return safeEqual(expected, sig);
   } catch {
     return false;
   }

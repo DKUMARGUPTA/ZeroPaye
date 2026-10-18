@@ -41,14 +41,49 @@ export function Dashboard() {
   const [data, setData] = useState<MerchantData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [adminKey, setAdminKey] = useState<string | null>(null);
+
+  // Fetch the demo admin API key once (dev-only bootstrap route).
+  // In production, the merchant would enter their admin key manually.
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/zeropaye/bootstrap");
+        if (r.ok) {
+          const d = await r.json();
+          setAdminKey(d.adminApiKey);
+        }
+      } catch { /* ignore — production */ }
+    })();
+  }, []);
 
   const load = async () => {
     setLoading(true);
     try {
+      const headers: Record<string, string> = adminKey
+        ? { "x-zeropaye-admin-key": adminKey }
+        : {};
       const [mRes, sRes] = await Promise.all([
-        fetch("/api/zeropaye/merchant"),
-        fetch("/api/zeropaye/session"),
+        fetch("/api/zeropaye/merchant", { headers }),
+        fetch("/api/zeropaye/session", { headers }),
       ]);
+      // If 401 (no/old admin key), re-bootstrap
+      if (mRes.status === 401 || sRes.status === 401) {
+        const b = await fetch("/api/zeropaye/bootstrap");
+        if (b.ok) {
+          const d = await b.json();
+          setAdminKey(d.adminApiKey);
+          const retry = { "x-zeropaye-admin-key": d.adminApiKey };
+          const [m2, s2] = await Promise.all([
+            fetch("/api/zeropaye/merchant", { headers: retry }),
+            fetch("/api/zeropaye/session", { headers: retry }),
+          ]);
+          const m = await m2.json();
+          const s = await s2.json();
+          setData({ ...m, sessions: s.sessions || [] });
+          return;
+        }
+      }
       const m = await mRes.json();
       const s = await sRes.json();
       setData({ ...m, sessions: s.sessions || [] });
@@ -60,10 +95,11 @@ export function Dashboard() {
   };
 
   useEffect(() => {
+    if (!adminKey) return;
     load();
     const t = setInterval(load, 5000);
     return () => clearInterval(t);
-  }, []);
+  }, [adminKey]);
 
   const copyKey = () => {
     if (!data) return;

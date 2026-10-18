@@ -1,20 +1,25 @@
-// ZeroPaye API — Simulate a UPI bank credit observation (DEMO magic button)
+// ZeroPaye API — Simulate a UPI bank credit observation (DEMO ONLY)
 // POST /api/zeropaye/simulate-payment
 // Body: { sessionId }
 // This endpoint mimics what the Android SMS observer / Gmail observer / Google
 // Messages observer would POST in production. In ZeroPaye's demo it lets the
 // reviewer complete the full flow without a real bank SMS.
 //
-// Fixes from audit: S2 (HMAC mandatory), S9 (hashed key), S19 (strict UTR regex),
-// S21 (no fallback-to-any-session), integer paise, idempotency via UTR.
+// Security (audit NEW-01 fixed):
+//  - DISABLED in production (NODE_ENV === "production" returns 404)
+//  - Requires x-zeropaye-admin-key header (constant-time compare)
+//  - Uses conditional updateMany to prevent double-confirm race (audit NEW-07)
+//
+// Fixes: S2, S9, S19, S21, integer paise, idempotency via UTR, NEW-01, NEW-07, NEW-10.
 
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { buildUpiUri } from "@/lib/zeropaye/upi";
 import { formatINR } from "@/lib/zeropaye/money";
-import { jsonOk, jsonErr, getRequestId, getClientIp, isSsrfSafe } from "@/lib/zeropaye/security";
+import { jsonOk, jsonErr, getRequestId, getClientIp, isSsrfSafe, getDemoMerchant } from "@/lib/zeropaye/security";
 import { sha256Hex, uuid, hmacSha256 } from "@/lib/zeropaye/crypto";
 import { randomInt } from "node:crypto";
+import { requireAdmin, requireDevMode } from "@/lib/zeropaye/admin-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +27,14 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const requestId = await getRequestId();
   try {
+    // Gate 1: demo-only — disabled in production
+    const devGate = requireDevMode();
+    if (!devGate.ok) return devGate.response;
+
+    // Gate 2: require admin API key (audit NEW-01)
+    const admin = await requireAdmin(req);
+    if (!admin.ok) return admin.response;
+
     const body = await req.json().catch(() => ({}));
     const sessionId = String(body?.sessionId || "");
     if (!sessionId) return jsonErr(400, "sessionId is required");
@@ -33,31 +46,29 @@ export async function POST(req: NextRequest) {
       return jsonErr(409, `Session must be ACTIVE or PROCESSING to confirm (current: ${session.status})`);
     }
 
-    // Move to PROCESSING if still ACTIVE (customer clicked "I've Paid")
-    let current = session;
-    if (session.status === "ACTIVE") {
-      current = await db.paymentSession.update({
-        where: { id: sessionId },
-        data: { status: "PROCESSING", processingAt: new Date() },
-      });
-    }
-
     // Generate a realistic 12-digit UTR (bank reference number)
     const utr = String(randomInt(100000000, 1000000000)) + String(randomInt(100, 999));
-
-    // Idempotency: if already SUCCESS with a UTR, don't double-confirm
-    if (current.status === "SUCCESS") {
-      return jsonOk({ confirmed: true, utr: current.utr, alreadyConfirmed: true });
-    }
 
     const clusterHash = sha256Hex(
       `${session.receivingAccountId}|${session.amountPaise}|${utr}|${Math.floor(Date.now() / 60000)}`
     );
 
-    // Create observation + transition to SUCCESS in a single transaction
     const ip = await getClientIp();
-    const updated = await db.$transaction(async (tx) => {
-      const obs = await tx.observation.create({
+
+    // Conditional settlement — only succeeds if status is still ACTIVE/PROCESSING.
+    // Prevents the double-confirm race (audit NEW-07).
+    const settled = await db.$transaction(async (tx) => {
+      // Atomically transition to PROCESSING if still ACTIVE (or keep PROCESSING)
+      const transitioned = await tx.paymentSession.updateMany({
+        where: { id: sessionId, status: { in: ["ACTIVE", "PROCESSING"] } },
+        data: { status: "PROCESSING", processingAt: new Date() },
+      });
+      if (transitioned.count === 0) {
+        // Someone else already settled it — return existing state
+        return null;
+      }
+
+      await tx.observation.create({
         data: {
           source: "SIMULATED",
           rawText: `[ZeroPaye Demo] UPI credit of ${formatINR(session.amountPaise)} via UTR ${utr}`,
@@ -70,8 +81,9 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const settled = await tx.paymentSession.update({
-        where: { id: sessionId },
+      // Conditional update: only if still PROCESSING (race-safe)
+      const confirm = await tx.paymentSession.updateMany({
+        where: { id: sessionId, status: "PROCESSING" },
         data: {
           status: "SUCCESS",
           utr,
@@ -80,6 +92,9 @@ export async function POST(req: NextRequest) {
           settledAt: new Date(),
         },
       });
+      if (confirm.count === 0) return null;
+
+      const settled = await tx.paymentSession.findUnique({ where: { id: sessionId } });
 
       // Free the slot for the next queued customer (Invariant 2)
       if (session.receivingAccountId) {
@@ -105,7 +120,7 @@ export async function POST(req: NextRequest) {
           merchantId: session.merchantId,
           paymentSessionId: session.id,
           entityType: "observation",
-          entityId: obs.id,
+          entityId: utr,
           action: "PAYMENT_CONFIRMED",
           actorType: "OBSERVER",
           actorId: "simulated",
@@ -118,19 +133,31 @@ export async function POST(req: NextRequest) {
       return settled;
     });
 
+    if (!settled) {
+      // Race lost — another caller already settled. Return current state.
+      const cur = await db.paymentSession.findUnique({ where: { id: sessionId } });
+      return jsonOk({
+        confirmed: cur?.status === "SUCCESS",
+        sessionId,
+        utr: cur?.utr ?? null,
+        alreadyConfirmed: true,
+        status: cur?.status,
+      });
+    }
+
     // Dispatch webhook (queued; retry daemon would handle failures in prod)
-    await dispatchWebhook(updated);
+    await dispatchWebhook(settled);
 
     return jsonOk({
       confirmed: true,
-      sessionId: updated.id,
-      orderId: updated.orderId,
-      utr: updated.utr,
-      amountPaise: updated.amountPaise,
-      amountRupees: (updated.amountPaise / 100).toFixed(2),
-      status: updated.status,
-      verificationTier: updated.verificationTier,
-      settledAt: updated.settledAt?.toISOString(),
+      sessionId: settled.id,
+      orderId: settled.orderId,
+      utr: settled.utr,
+      amountPaise: settled.amountPaise,
+      amountRupees: (settled.amountPaise / 100).toFixed(2),
+      status: settled.status,
+      verificationTier: settled.verificationTier,
+      settledAt: settled.settledAt?.toISOString(),
     });
   } catch (e) {
     console.error("[ZeroPaye] simulate-payment error", e);
@@ -156,19 +183,20 @@ async function dispatchWebhook(session: any) {
       timestamp: Date.now(),
     });
     const signature = `sha256=${hmacSha256(merchant.webhookSecret, payload)}`;
-    await db.webhookDelivery.create({
+    const deliveryId = uuid();
+    const delivery = await db.webhookDelivery.create({
       data: {
         paymentSessionId: session.id,
         eventType: "SUCCESS",
-        deliveryId: uuid(),
+        deliveryId,
         payload,
         status: "PENDING",
       },
     });
     // Attempt delivery (best-effort; SSRF guard in security.ts)
     if (!isSsrfSafe(merchant.webhookUrl, true)) {
-      await db.webhookDelivery.updateMany({
-        where: { paymentSessionId: session.id, eventType: "SUCCESS" },
+      await db.webhookDelivery.update({
+        where: { id: delivery.id },
         data: { status: "FAILED", responseError: "SSRF blocked" },
       });
       return;
@@ -180,19 +208,19 @@ async function dispatchWebhook(session: any) {
           "content-type": "application/json",
           "x-zeropaye-signature": signature,
           "x-zeropaye-event": "SUCCESS",
-          "x-zeropaye-delivery-id": uuid(),
+          "x-zeropaye-delivery-id": deliveryId,
           "x-zeropaye-timestamp": String(Date.now()),
         },
         body: payload,
         signal: AbortSignal.timeout(10000),
       });
-      await db.webhookDelivery.updateMany({
-        where: { paymentSessionId: session.id, eventType: "SUCCESS" },
+      await db.webhookDelivery.update({
+        where: { id: delivery.id },
         data: { status: res.ok ? "SUCCESS" : "FAILED", responseCode: res.status, attempts: { increment: 1 } },
       });
     } catch (err: any) {
-      await db.webhookDelivery.updateMany({
-        where: { paymentSessionId: session.id, eventType: "SUCCESS" },
+      await db.webhookDelivery.update({
+        where: { id: delivery.id },
         data: { status: "RETRYING", responseError: String(err?.message || err).slice(0, 200), attempts: { increment: 1 }, nextRetryAt: new Date(Date.now() + 30000) },
       });
     }

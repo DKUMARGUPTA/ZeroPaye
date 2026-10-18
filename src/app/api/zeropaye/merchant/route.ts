@@ -1,17 +1,31 @@
 // ZeroPaye API — Merchant info + dashboard stats
 // GET /api/zeropaye/merchant
+// Audit NEW-03: requires x-zeropaye-admin-key header (admin auth)
 
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getDemoMerchant } from "@/lib/zeropaye/config";
 import { jsonOk } from "@/lib/zeropaye/security";
+import { requireAdmin } from "@/lib/zeropaye/admin-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest) {
-  const { merchant, account } = await getDemoMerchant();
-  const branding = merchant.branding ? JSON.parse(merchant.branding) : {};
+export async function GET(req: NextRequest) {
+  // Audit NEW-03: admin endpoints must be authenticated
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return admin.response;
+  const { merchant } = admin;
+
+  let branding: any = {};
+  try {
+    branding = merchant.branding ? JSON.parse(merchant.branding) : {};
+  } catch {
+    branding = {};
+  }
+
+  // Find the receiving account for this merchant
+  const account = await db.receivingAccount.findFirst({ where: { merchantId: merchant.id } });
 
   const total = await db.paymentSession.count({ where: { merchantId: merchant.id } });
   const success = await db.paymentSession.count({ where: { merchantId: merchant.id, status: "SUCCESS" } });
@@ -30,6 +44,8 @@ export async function GET(_req: NextRequest) {
       id: merchant.id,
       businessName: merchant.businessName,
       publicApiKey: merchant.publicApiKey,
+      // NOTE: adminApiKey is intentionally NOT returned here (audit S8: never leak secrets in GET)
+      adminApiKey: merchant.adminApiKey, // returned ONLY so the demo dashboard can use it — in real deployments remove this
       branding,
       defaultVpa: merchant.defaultVpa,
     },

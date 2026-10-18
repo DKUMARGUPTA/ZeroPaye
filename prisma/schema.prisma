@@ -139,12 +139,11 @@ model Observation {
   receivingAccount  ReceivingAccount? @relation(fields: [receivingAccountId], references: [id])
   paymentSessionId  String?
   paymentSession    PaymentSession? @relation(fields: [paymentSessionId], references: [id])
-  clusterHash       String?  // SHA-256(receivingAccount + amount + UTR + timeBucket)
+  clusterHash       String?  @unique  // audit NEW-08: unique constraint (was just an index)
   verificationTier  Int      @default(0)
   createdAt         DateTime @default(now())
 
   @@index([receivingAccountId])
-  @@index([clusterHash])
 }
 
 // ---------------------------------------------------------------------------

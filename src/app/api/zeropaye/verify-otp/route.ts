@@ -46,25 +46,44 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 5 * 60 * 1000);
 
+    if (!session.receivingAccountId) {
+      return jsonErr(500, "Session has no receiving account"); // audit NEW-13
+    }
+
+    // Race-safe slot acquisition (audit NEW-06): use conditional updateMany
+    // so double-clicked verify attempts can't both transition the same session.
     const updated = await db.$transaction(async (tx) => {
       const account = await tx.receivingAccount.findUnique({ where: { id: session.receivingAccountId! } });
       if (!account) throw new Error("Receiving account missing");
 
+      // Conditional: only update if still AUTH_PENDING (race-safe)
       if (!account.isSlotBusy) {
-        await tx.receivingAccount.update({ where: { id: account.id }, data: { isSlotBusy: true } });
-        return tx.paymentSession.update({
-          where: { id: sessionId },
+        const acquired = await tx.paymentSession.updateMany({
+          where: { id: sessionId, status: "AUTH_PENDING" },
           data: { status: "ACTIVE", activatedAt: now, expiresAt },
         });
+        if (acquired.count === 0) {
+          // Someone else already moved it — return current state
+          return await tx.paymentSession.findUnique({ where: { id: sessionId } });
+        }
+        await tx.receivingAccount.update({ where: { id: account.id }, data: { isSlotBusy: true } });
+        return await tx.paymentSession.findUnique({ where: { id: sessionId } });
       }
+      // Slot busy — enqueue, but only if still AUTH_PENDING (race-safe)
       const queuedCount = await tx.paymentSession.count({
         where: { receivingAccountId: account.id, status: "QUEUED" },
       });
-      return tx.paymentSession.update({
-        where: { id: sessionId },
+      const enqueued = await tx.paymentSession.updateMany({
+        where: { id: sessionId, status: "AUTH_PENDING" },
         data: { status: "QUEUED", queuePosition: queuedCount + 1 },
       });
+      if (enqueued.count === 0) {
+        return await tx.paymentSession.findUnique({ where: { id: sessionId } });
+      }
+      return await tx.paymentSession.findUnique({ where: { id: sessionId } });
     });
+
+    if (!updated) return jsonErr(404, "Session disappeared mid-transaction");
 
     await db.auditLog.create({
       data: {

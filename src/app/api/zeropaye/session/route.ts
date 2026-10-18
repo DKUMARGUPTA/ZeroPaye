@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { getDemoMerchant } from "@/lib/zeropaye/config";
 import { toPaise } from "@/lib/zeropaye/money";
 import { jsonOk, jsonErr, getClientIp, getUserAgent, getRequestId } from "@/lib/zeropaye/security";
+import { requireAdmin } from "@/lib/zeropaye/admin-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -118,8 +119,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
-  const { merchant } = await getDemoMerchant();
+export async function GET(req: NextRequest) {
+  // Audit NEW-03: admin endpoints must be authenticated
+  const admin = await requireAdmin(req);
+  if (!admin.ok) return admin.response;
+  const { merchant } = admin;
   const sessions = await db.paymentSession.findMany({
     where: { merchantId: merchant.id },
     orderBy: { createdAt: "desc" },

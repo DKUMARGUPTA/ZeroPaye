@@ -59,11 +59,37 @@ export async function ensureDemoMerchant() {
         lastHeartbeatAt: new Date(),
       },
     });
-    // Persist the plaintext signing key in process.env for the demo ONLY.
-    // In real deployments the device keeps the plaintext in EncryptedSharedPreferences.
-    process.env.DEMO_DEVICE_SIGNING_KEY = signingKey;
+    // Audit NEW-09: persist the demo plaintext signing key to a 0600-perm sidecar
+    // file so it survives server restarts. In real deployments, the device keeps
+    // the plaintext in EncryptedSharedPreferences; the server stores only the hash.
+    try {
+      const fs = await import("node:fs");
+      const path = await import("node:path");
+      const keyFile = path.join(process.cwd(), ".demo-observer-key");
+      fs.writeFileSync(keyFile, signingKey, { mode: 0o600 });
+    } catch (e) {
+      console.error("[ZeroPaye] could not persist demo observer key", e);
+    }
   }
   return m;
+}
+
+/**
+ * Read the demo observer signing key from the sidecar file (persists across restarts).
+ * Audit NEW-09: previously stored in process.env which is lost on restart.
+ */
+export async function getDemoObserverKey(): Promise<string | null> {
+  try {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const keyFile = path.join(process.cwd(), ".demo-observer-key");
+    if (fs.existsSync(keyFile)) {
+      return fs.readFileSync(keyFile, "utf8").trim();
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
 }
 
 export async function getDemoMerchant() {
