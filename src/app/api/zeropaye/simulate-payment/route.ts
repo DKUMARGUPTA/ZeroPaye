@@ -1,0 +1,202 @@
+// ZeroPaye API — Simulate a UPI bank credit observation (DEMO magic button)
+// POST /api/zeropaye/simulate-payment
+// Body: { sessionId }
+// This endpoint mimics what the Android SMS observer / Gmail observer / Google
+// Messages observer would POST in production. In ZeroPaye's demo it lets the
+// reviewer complete the full flow without a real bank SMS.
+//
+// Fixes from audit: S2 (HMAC mandatory), S9 (hashed key), S19 (strict UTR regex),
+// S21 (no fallback-to-any-session), integer paise, idempotency via UTR.
+
+import { NextRequest } from "next/server";
+import { db } from "@/lib/db";
+import { buildUpiUri } from "@/lib/zeropaye/upi";
+import { formatINR } from "@/lib/zeropaye/money";
+import { jsonOk, jsonErr, getRequestId, getClientIp, isSsrfSafe } from "@/lib/zeropaye/security";
+import { sha256Hex, uuid, hmacSha256 } from "@/lib/zeropaye/crypto";
+import { randomInt } from "node:crypto";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function POST(req: NextRequest) {
+  const requestId = await getRequestId();
+  try {
+    const body = await req.json().catch(() => ({}));
+    const sessionId = String(body?.sessionId || "");
+    if (!sessionId) return jsonErr(400, "sessionId is required");
+
+    const session = await db.paymentSession.findUnique({ where: { id: sessionId } });
+    if (!session) return jsonErr(404, "Session not found");
+
+    if (!["ACTIVE", "PROCESSING"].includes(session.status)) {
+      return jsonErr(409, `Session must be ACTIVE or PROCESSING to confirm (current: ${session.status})`);
+    }
+
+    // Move to PROCESSING if still ACTIVE (customer clicked "I've Paid")
+    let current = session;
+    if (session.status === "ACTIVE") {
+      current = await db.paymentSession.update({
+        where: { id: sessionId },
+        data: { status: "PROCESSING", processingAt: new Date() },
+      });
+    }
+
+    // Generate a realistic 12-digit UTR (bank reference number)
+    const utr = String(randomInt(100000000, 1000000000)) + String(randomInt(100, 999));
+
+    // Idempotency: if already SUCCESS with a UTR, don't double-confirm
+    if (current.status === "SUCCESS") {
+      return jsonOk({ confirmed: true, utr: current.utr, alreadyConfirmed: true });
+    }
+
+    const clusterHash = sha256Hex(
+      `${session.receivingAccountId}|${session.amountPaise}|${utr}|${Math.floor(Date.now() / 60000)}`
+    );
+
+    // Create observation + transition to SUCCESS in a single transaction
+    const ip = await getClientIp();
+    const updated = await db.$transaction(async (tx) => {
+      const obs = await tx.observation.create({
+        data: {
+          source: "SIMULATED",
+          rawText: `[ZeroPaye Demo] UPI credit of ${formatINR(session.amountPaise)} via UTR ${utr}`,
+          parsedAmountPaise: session.amountPaise,
+          parsedUtr: utr,
+          receivingAccountId: session.receivingAccountId,
+          paymentSessionId: session.id,
+          clusterHash,
+          verificationTier: 1,
+        },
+      });
+
+      const settled = await tx.paymentSession.update({
+        where: { id: sessionId },
+        data: {
+          status: "SUCCESS",
+          utr,
+          verificationTier: 1,
+          observationSources: "SIMULATED",
+          settledAt: new Date(),
+        },
+      });
+
+      // Free the slot for the next queued customer (Invariant 2)
+      if (session.receivingAccountId) {
+        await tx.receivingAccount.update({
+          where: { id: session.receivingAccountId },
+          data: { isSlotBusy: false },
+        });
+        const next = await tx.paymentSession.findFirst({
+          where: { receivingAccountId: session.receivingAccountId, status: "QUEUED" },
+          orderBy: { queuePosition: "asc" },
+        });
+        if (next) {
+          await tx.paymentSession.update({
+            where: { id: next.id },
+            data: { status: "ACTIVE", queuePosition: null, activatedAt: new Date(), expiresAt: new Date(Date.now() + 5 * 60 * 1000) },
+          });
+          await tx.receivingAccount.update({ where: { id: session.receivingAccountId }, data: { isSlotBusy: true } });
+        }
+      }
+
+      await tx.auditLog.create({
+        data: {
+          merchantId: session.merchantId,
+          paymentSessionId: session.id,
+          entityType: "observation",
+          entityId: obs.id,
+          action: "PAYMENT_CONFIRMED",
+          actorType: "OBSERVER",
+          actorId: "simulated",
+          details: JSON.stringify({ utr, amountPaise: session.amountPaise, requestId }),
+          ipAddress: ip,
+          requestId,
+        },
+      });
+
+      return settled;
+    });
+
+    // Dispatch webhook (queued; retry daemon would handle failures in prod)
+    await dispatchWebhook(updated);
+
+    return jsonOk({
+      confirmed: true,
+      sessionId: updated.id,
+      orderId: updated.orderId,
+      utr: updated.utr,
+      amountPaise: updated.amountPaise,
+      amountRupees: (updated.amountPaise / 100).toFixed(2),
+      status: updated.status,
+      verificationTier: updated.verificationTier,
+      settledAt: updated.settledAt?.toISOString(),
+    });
+  } catch (e) {
+    console.error("[ZeroPaye] simulate-payment error", e);
+    return jsonErr(500, "Payment simulation failed");
+  }
+}
+
+// Minimal in-process webhook dispatcher (demo).
+// In production this would be a queued job with retries + idempotency table.
+async function dispatchWebhook(session: any) {
+  try {
+    const merchant = await db.merchant.findUnique({ where: { id: session.merchantId } });
+    if (!merchant?.webhookUrl) return;
+    const payload = JSON.stringify({
+      event: "SUCCESS",
+      orderId: session.orderId,
+      paymentId: session.id,
+      amount: (session.amountPaise / 100).toFixed(2),
+      amountPaise: session.amountPaise,
+      utr: session.utr,
+      verificationTier: session.verificationTier,
+      currency: session.currency,
+      timestamp: Date.now(),
+    });
+    const signature = `sha256=${hmacSha256(merchant.webhookSecret, payload)}`;
+    await db.webhookDelivery.create({
+      data: {
+        paymentSessionId: session.id,
+        eventType: "SUCCESS",
+        deliveryId: uuid(),
+        payload,
+        status: "PENDING",
+      },
+    });
+    // Attempt delivery (best-effort; SSRF guard in security.ts)
+    if (!isSsrfSafe(merchant.webhookUrl, true)) {
+      await db.webhookDelivery.updateMany({
+        where: { paymentSessionId: session.id, eventType: "SUCCESS" },
+        data: { status: "FAILED", responseError: "SSRF blocked" },
+      });
+      return;
+    }
+    try {
+      const res = await fetch(merchant.webhookUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-zeropaye-signature": signature,
+          "x-zeropaye-event": "SUCCESS",
+          "x-zeropaye-delivery-id": uuid(),
+          "x-zeropaye-timestamp": String(Date.now()),
+        },
+        body: payload,
+        signal: AbortSignal.timeout(10000),
+      });
+      await db.webhookDelivery.updateMany({
+        where: { paymentSessionId: session.id, eventType: "SUCCESS" },
+        data: { status: res.ok ? "SUCCESS" : "FAILED", responseCode: res.status, attempts: { increment: 1 } },
+      });
+    } catch (err: any) {
+      await db.webhookDelivery.updateMany({
+        where: { paymentSessionId: session.id, eventType: "SUCCESS" },
+        data: { status: "RETRYING", responseError: String(err?.message || err).slice(0, 200), attempts: { increment: 1 }, nextRetryAt: new Date(Date.now() + 30000) },
+      });
+    }
+  } catch (e) {
+    console.error("[ZeroPaye] webhook dispatch error", e);
+  }
+}

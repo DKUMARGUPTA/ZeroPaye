@@ -1,0 +1,49 @@
+# Dependencies
+/node_modules/
+/.pnp
+.pnp.*
+
+# Next.js build output
+/.next/
+/out/
+/build/
+
+# Production
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Database (SQLite) — never commit local DB
+/db/*.db
+/db/*.db-journal
+/db/*.db-wal
+/db/*.db-shm
+/prisma/*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+dev.log
+server.log
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Misc
+worklog.md
+/upload/
+/download/
+/youpi-extracted/
+/tests/
+/skills/

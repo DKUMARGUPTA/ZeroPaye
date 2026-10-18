@@ -1,0 +1,208 @@
+// ZeroPaye — Prisma Schema
+// 100% Open-Source (AGPL-3.0) • Direct • Empowering • Effortless • Pay (UPI)
+// Security improvements over YouPI-PG: hashed observer keys, admin auth, no
+// hardcoded secrets/PII, webhook idempotency, audit log with request-id + IP.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// MERCHANTS (multi-tenant capable; ships with one demo merchant)
+// ---------------------------------------------------------------------------
+model Merchant {
+  id              String   @id @default(cuid())
+  businessName    String
+  publicApiKey   String   @unique @default(cuid())
+  adminApiKey    String   @unique @default(cuid()) // admin auth (S1 fix)
+  webhookSecret  String   // rotated on first boot, never returned in GET (S8 fix)
+  webhookUrl     String?
+  branding       String?  // JSON: brandName, logoUrl, accentColor, gradient, etc.
+  defaultVpa     String?
+  activeWindowMs  Int     @default(300000) // 5 min pay window
+  verifyWindowMs   Int    @default(30000)  // 30 sec verify window
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  receivingAccounts ReceivingAccount[]
+  paymentSessions   PaymentSession[]
+  devices           Device[]
+  auditLogs         AuditLog[]
+}
+
+model ReceivingAccount {
+  id              String   @id @default(cuid())
+  merchantId      String
+  merchant        Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  vpa             String
+  accountName     String
+  isSlotBusy      Boolean  @default(false)
+  dailyLimitPaise Int      @default(10000000) // ₹1,00,000 default UPI limit
+  createdAt       DateTime @default(now())
+
+  paymentSessions PaymentSession[]
+  observations    Observation[]
+
+  @@unique([merchantId, vpa])
+}
+
+// ---------------------------------------------------------------------------
+// CUSTOMERS (gateway-owned identity; no merchant-collected phone data)
+// ---------------------------------------------------------------------------
+model Customer {
+  id           String   @id @default(cuid())
+  mobileNumber String   @unique
+  name         String?
+  email        String?
+  riskTier     String   @default("LOW") // LOW | MEDIUM | HIGH | BANNED
+  isBanned     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions        CustomerSession[]
+  paymentSessions PaymentSession[]
+}
+
+model CustomerSession {
+  id          String   @id @default(cuid())
+  token       String   @unique @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  userAgent   String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([customerId])
+}
+
+// ---------------------------------------------------------------------------
+// PAYMENT SESSIONS (server-authoritative state machine)
+// ---------------------------------------------------------------------------
+model PaymentSession {
+  id                String   @id @default(cuid())
+  merchantId        String
+  merchant          Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  customerId        String?
+  customer          Customer? @relation(fields: [customerId], references: [id])
+  receivingAccountId String?
+  receivingAccount  ReceivingAccount? @relation(fields: [receivingAccountId], references: [id])
+
+  orderId           String
+  amountPaise       Int
+  currency          String   @default("INR")
+  description       String?
+  customerName      String?
+
+  // INITIATED -> AUTH_PENDING -> AUTHENTICATED -> (ACTIVE | QUEUED)
+  //  -> PROCESSING -> SUCCESS | FAILED | EXPIRED | CANCELLED | SUSPICIOUS | BLOCKED
+  status            String   @default("INITIATED")
+  queuePosition     Int?
+
+  utr               String?
+  verificationTier  Int      @default(0) // 0 none, 1 single-channel, 2 dual, 3 triple
+  observationSources String? // CSV of sources that confirmed
+
+  expiresAt         DateTime?
+  activatedAt       DateTime?
+  processingAt      DateTime?
+  settledAt         DateTime?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  observations       Observation[]
+  auditLogs          AuditLog[]
+  webhookDeliveries  WebhookDelivery[]
+
+  @@index([merchantId, status])
+  @@index([receivingAccountId, status])
+  @@index([orderId])
+}
+
+// ---------------------------------------------------------------------------
+// OBSERVATIONS (bank SMS / email / push parsed and deduplicated)
+// ---------------------------------------------------------------------------
+model Observation {
+  id                String   @id @default(cuid())
+  source            String   // ANDROID_SMS | ANDROID_PUSH | GMAIL | SMS_GATEWAY | MANUAL | SIMULATED
+  rawText           String?
+  parsedAmountPaise Int?
+  parsedUtr         String?
+  senderVpa         String?
+  receivingAccountId String?
+  receivingAccount  ReceivingAccount? @relation(fields: [receivingAccountId], references: [id])
+  paymentSessionId  String?
+  paymentSession    PaymentSession? @relation(fields: [paymentSessionId], references: [id])
+  clusterHash       String?  // SHA-256(receivingAccount + amount + UTR + timeBucket)
+  verificationTier  Int      @default(0)
+  createdAt         DateTime @default(now())
+
+  @@index([receivingAccountId])
+  @@index([clusterHash])
+}
+
+// ---------------------------------------------------------------------------
+// DEVICES (Android observer enrollment with hashed signing key — S9 fix)
+// ---------------------------------------------------------------------------
+model Device {
+  id              String   @id @default(cuid())
+  merchantId      String
+  merchant        Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  deviceName      String
+  deviceId        String   @unique // client-generated UUID
+  signingKeyHash  String   // SHA-256 hash of the HMAC secret (NOT plaintext — S9 fix)
+  isActive        Boolean  @default(true)
+  lastHeartbeatAt DateTime?
+  createdAt       DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// AUDIT LOG (with request-id + IP for traceability — A13 fix)
+// ---------------------------------------------------------------------------
+model AuditLog {
+  id          String   @id @default(cuid())
+  merchantId  String?
+  merchant    Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  paymentSessionId String?
+  paymentSession PaymentSession? @relation(fields: [paymentSessionId], references: [id])
+  entityType  String
+  entityId    String?
+  action      String
+  actorType   String   // ADMIN | CUSTOMER | OBSERVER | SYSTEM
+  actorId     String?
+  details     String?  // JSON
+  ipAddress   String?
+  requestId   String?
+  createdAt   DateTime @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// ---------------------------------------------------------------------------
+// WEBHOOK DELIVERIES (idempotency via delivery_id unique — S33 fix)
+// ---------------------------------------------------------------------------
+model WebhookDelivery {
+  id                String   @id @default(cuid())
+  paymentSessionId  String
+  paymentSession    PaymentSession @relation(fields: [paymentSessionId], references: [id], onDelete: Cascade)
+  eventType         String   // SUCCESS | FAILED | SUSPICIOUS | EXPIRED | CANCELLED
+  deliveryId        String   @unique // uuid v4, used for idempotency
+  payload           String   // JSON body sent to merchant
+  status            String   @default("PENDING") // PENDING | SUCCESS | FAILED | RETRYING
+  attempts          Int      @default(0)
+  nextRetryAt       DateTime?
+  responseCode      Int?
+  responseError     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([paymentSessionId])
+  @@index([status, nextRetryAt])
+}
