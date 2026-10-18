@@ -8,7 +8,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { issueOtp } from "@/lib/zeropaye/otp-store";
-import { isValidIndianMobile } from "@/lib/zeropaye/upi";
+import { normalizeIndianMobile, isValidIndianMobileStrict } from "@/lib/zeropaye/validation";
 import { jsonOk, jsonErr, rateLimit, getClientIp } from "@/lib/zeropaye/security";
 
 export const runtime = "nodejs";
@@ -17,10 +17,12 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const mobile = String(body?.mobile || "").replace(/[\s+-]/g, "");
+    // Phase 2: normalize mobile (strip +91 / leading 0) and validate strictly (audit NEW-24)
+    const rawMobile = String(body?.mobile || "");
+    const mobile = normalizeIndianMobile(rawMobile);
 
-    if (!isValidIndianMobile(mobile)) {
-      return jsonErr(400, "Please enter a valid 10-digit Indian mobile number");
+    if (!isValidIndianMobileStrict(rawMobile)) {
+      return jsonErr(400, "Please enter a valid 10-digit Indian mobile number (e.g. 9876543210)");
     }
 
     const ip = await getClientIp();

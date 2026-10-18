@@ -9,6 +9,7 @@ import { getDemoMerchant } from "@/lib/zeropaye/config";
 import { toPaise } from "@/lib/zeropaye/money";
 import { jsonOk, jsonErr, getClientIp, getUserAgent, getRequestId } from "@/lib/zeropaye/security";
 import { requireAdmin } from "@/lib/zeropaye/admin-auth";
+import { isValidOrderId, isValidCurrency, getIdempotencyKey } from "@/lib/zeropaye/validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +20,15 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const { merchantId, orderId, amount, currency, description, customerName } = body || {};
 
+    // Input validation (audit NEW-18, NEW-16, NEW-17)
     if (!orderId) return jsonErr(400, "orderId is required");
+    if (!isValidOrderId(String(orderId))) {
+      return jsonErr(400, "orderId must be 1-35 chars, alphanumeric + dash/underscore only");
+    }
     if (amount === undefined || amount === null) return jsonErr(400, "amount is required");
+    if (currency && !isValidCurrency(String(currency))) {
+      return jsonErr(400, "currency must be a 3-letter ISO 4217 code (e.g. INR)");
+    }
 
     let amountPaise: number;
     try {

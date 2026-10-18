@@ -7,6 +7,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { verifyOtp } from "@/lib/zeropaye/otp-store";
 import { jsonOk, jsonErr, rateLimit, getClientIp, getUserAgent, getRequestId } from "@/lib/zeropaye/security";
+import { normalizeIndianMobile, isValidIndianMobileStrict } from "@/lib/zeropaye/validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,12 +16,15 @@ export async function POST(req: NextRequest) {
   const requestId = await getRequestId();
   try {
     const body = await req.json().catch(() => ({}));
-    const mobile = String(body?.mobile || "").replace(/[\s+-]/g, "");
+    const mobile = normalizeIndianMobile(String(body?.mobile || ""));
     const otp = String(body?.otp || "").trim();
     const sessionId = String(body?.sessionId || "");
 
     if (!mobile || !otp || !sessionId) {
       return jsonErr(400, "mobile, otp and sessionId are required");
+    }
+    if (!isValidIndianMobileStrict(mobile)) {
+      return jsonErr(400, "mobile must be a valid 10-digit Indian mobile number");
     }
 
     const ip = await getClientIp();
