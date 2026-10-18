@@ -760,6 +760,91 @@ async def zeropaye_webhook(request: Request):
     return {"received": True}
 ```
 
+#### PHP (vanilla — no framework)
+```php
+<?php
+// /api/zeropaye-webhook.php
+$rawPayload = file_get_contents("php://input");
+$signature = $_SERVER["HTTP_X_ZEROPAYE_SIGNATURE"] ?? "";
+$secret = getenv("ZEROPAYE_WEBHOOK_SECRET");
+
+// Strip optional "sha256=" prefix
+$sig = preg_replace('/^sha256=/i', '', $signature);
+$expected = hash_hmac("sha256", $rawPayload, $secret);
+
+// Constant-time comparison (hash_equals defeats timing attacks)
+if (!hash_equals($expected, $sig)) {
+    http_response_code(401);
+    exit(json_encode(["error" => "Invalid webhook signature"]));
+}
+
+$event = json_decode($rawPayload, true);
+if (($event["event"] ?? "") === "SUCCESS") {
+    // Dedup by X-ZeroPaye-Delivery-Id header, then fulfill
+    $orderId = $event["orderId"];
+    $utr = $event["utr"];
+    $amount = $event["amount"];
+    fulfill_order($orderId, $utr, $amount);
+}
+
+http_response_code(200);
+echo json_encode(["received" => true]);
+?>
+```
+
+#### Go (`net/http`)
+```go
+package main
+
+import (
+    "crypto/hmac"
+    "crypto/sha256"
+    "encoding/hex"
+    "encoding/json"
+    "io"
+    "net/http"
+    "os"
+    "strings"
+)
+
+func zeropayeWebhookHandler(w http.ResponseWriter, r *http.Request) {
+    rawBody, err := io.ReadAll(r.Body)
+    if err != nil {
+        http.Error(w, "Cannot read body", http.StatusBadRequest)
+        return
+    }
+    defer r.Body.Close()
+
+    signature := r.Header.Get("X-ZeroPaye-Signature")
+    sig := strings.TrimPrefix(signature, "sha256=")
+    secret := []byte(os.Getenv("ZEROPAYE_WEBHOOK_SECRET"))
+
+    mac := hmac.New(sha256.New, secret)
+    mac.Write(rawBody)
+    expected := hex.EncodeToString(mac.Sum(nil))
+
+    if !hmac.Equal([]byte(sig), []byte(expected)) {
+        http.Error(w, "Invalid webhook signature", http.StatusUnauthorized)
+        return
+    }
+
+    var payload struct {
+        Event       string `json:"event"`
+        OrderId     string `json:"orderId"`
+        UTR         string `json:"utr"`
+        Amount      string `json:"amount"`
+        AmountPaise int64  `json:"amountPaise"`
+    }
+    if err := json.Unmarshal(rawBody, &payload); err == nil && payload.Event == "SUCCESS" {
+        // Dedup by X-ZeroPaye-Delivery-Id, then fulfill
+        fulfillOrder(payload.OrderId, payload.UTR, payload.Amount)
+    }
+
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte(`{"received":true}`))
+}
+```
+
 #### Webhook payload structure
 ```json
 {
@@ -968,8 +1053,9 @@ ZeroPaye/
 │   │   ├── admin-auth.ts         # Admin API key verification
 │   │   └── config.ts             # Demo merchant seeding (no hardcoded PII)
 │   │
-│   ├── app/api/zeropaye/         # 10 API endpoints
+│   ├── app/api/zeropaye/         # 11 API endpoints
 │   │   ├── bootstrap/route.ts    # [Dev-only] Get admin key for demo
+│   │   ├── health/route.ts       # Health check (liveness + DB check)
 │   │   ├── session/route.ts      # Create/list sessions (admin-auth for GET)
 │   │   ├── send-otp/route.ts     # Send OTP (rate-limited)
 │   │   ├── verify-otp/route.ts   # Verify OTP (race-safe slot acquisition)
