@@ -218,6 +218,368 @@ Is page mein **poora interactive checkout demo** hai (koi signup nahi chahiye). 
 
 ---
 
+## 👤 Merchant Guide — Koi bhi merchant kaise use karega
+
+Yeh section us **dukandaar / freelancer / startup owner** ke liye hai jo ZeroPaye ko asli business mein use karna chahta hai. Demo nahi — **asli payments receive karna**. Pura process step-by-step, aasan bhasha mein.
+
+### 📋 Merchant kin-kin types ke hote hain?
+
+| Merchant Type | Example | ZeroPaye fit? |
+|---|---|---|
+| 🏪 **Offline dukaandaar** (kirana, garment, mobile shop) | Customer counter pe khada hai, QR scan karega | ✅ Counter mode |
+| 🌐 **Online store** (Shopify, WooCommerce, custom website) | Website pe "Buy Now" button | ✅ Website integration |
+| 📱 **Freelancer / creator** (designer, tutor, YouTuber) | WhatsApp pe payment link bhejna | ✅ Payment link |
+| 🏢 **SaaS startup** (subscription billing) | Recurring monthly billing | ⚠️ Partial (recurring v1.2 mein) |
+| 🎟️ **Event / ticket seller** | One-time ticket sales | ✅ One-time payments |
+
+> **Bottom line:** One-time payments ke liye ZeroPaye abhi ready hai. Recurring/subscriptions v1.2 mein aayega.
+
+---
+
+### 🛠️ Step 1: ZeroPaye ko apne server par install karein (15 minute)
+
+#### Requirements (kya-kya chahiye):
+| Cheez | Kyun | Kahan se milega |
+|---|---|---|
+| **VPS ya Cloud Server** | ZeroPaye chalane ke liye | DigitalOcean ($6/mo), AWS Lightsail, Railway, Render |
+| **Domain name** | `pay.aapkidukan.com` jaisa | GoDaddy, Namecheap, Cloudflare (₹500-1000/year) |
+| **Node.js 20+** | Runtime | [nodejs.org](https://nodejs.org) |
+| **Aapka UPI VPA** | Jispar paisa aayega | Aapke bank app mein (jaise `yourname@okhdfcbank`) |
+
+#### Install commands:
+```bash
+# 1. Server par login karein (SSH)
+ssh root@aapka-server-ip
+
+# 2. Code download karein
+git clone https://github.com/DKUMARGUPTA/ZeroPaye.git
+cd ZeroPaye
+
+# 3. Dependencies install
+bun install   # ya: npm install
+
+# 4. Environment file banayein
+cp .env.example .env
+nano .env     # DATABASE_URL set karein
+
+# 5. Database setup
+bun run db:push
+
+# 6. Production build (optional, demo ke liye `bun run dev` bhi chalega)
+bun run build
+
+# 7. Server start karein (PM2 recommended for production)
+bun run start
+```
+
+**Production tip:** PM2 ya systemd se server ko background mein chalayein taaki restart hone par bhi chalta rahe:
+```bash
+npm install -g pm2
+pm2 start "bun run start" --name zeropaye
+pm2 save
+pm2 startup   # server reboot pe auto-start
+```
+
+---
+
+### 🔑 Step 2: Apni merchant account setup karein
+
+Pehli baar server chalane par ZeroPaye automatically ek **demo merchant** banata hai. Asli use ke liye aapko apni **UPI VPA** aur **branding** set karni hogi.
+
+#### 2a. Admin API Key nikalein
+```bash
+# Dev mode mein (bootstrap endpoint)
+curl http://localhost:3000/api/zeropaye/bootstrap
+
+# Response:
+# {
+#   "merchantId": "cmvd...",
+#   "publicApiKey": "zp_xxx...",      # customer-facing (website embed ke liye)
+#   "adminApiKey": "zp_yyy...",       # secret — admin actions ke liye
+#   "defaultVpa": "zeropaye.demo@upi"
+# }
+```
+
+> ⚠️ **`adminApiKey` ko secret rakhein!** Yeh kisi ko mat dein. Yeh aapke merchant account ka "password" hai.
+
+#### 2b. Apna UPI VPA add karein
+```bash
+# Apna asli UPI VPA set karein (jaise: deepak@okhdfcbank)
+curl -X POST http://localhost:3000/api/zeropaye/session \
+  -H "content-type: application/json" \
+  -H "x-zeropaye-admin-key: zp_yyy..." \
+  -d '{
+    "orderId": "VPA_SETUP",
+    "amount": 1,
+    "description": "VPA setup test"
+  }'
+```
+
+> 💡 **Pro tip:** Pehle ₹1 ka test transaction karke check karein ki payment aapke bank mein aa raha hai. Phir hi asli use shuru karein.
+
+#### 2c. Branding customize karein (white-label)
+Apne brand ka naam, logo, colors set karein. Yeh data `merchants.branding` JSON field mein store hota hai. Demo mein `config.ts` edit karke ya (v1.2 mein) admin UI se badal sakte hain.
+
+```json
+{
+  "brandName": "Sharma Kirana Store",
+  "tagline": "Aapka apna dukaan",
+  "accentColor": "#d97706",
+  "logoText": "SKS",
+  "gradientFrom": "#d97706",
+  "gradientTo": "#92400e"
+}
+```
+
+---
+
+### 🌐 Step 3: Apni website mein integrate karein
+
+#### Option A: Simple HTML website (Shopify, WordPress, custom HTML)
+
+```html
+<!-- Apne website ke <head> mein yeh script add karein -->
+<script src="https://pay.aapkidukan.com/zeropaye.js"
+        data-zeropaye-key="zp_xxx_your_public_key"
+        data-currency="INR">
+</script>
+
+<!-- Phir kisi bhi product button mein yeh attributes add karein -->
+<button data-zeropaye-pay
+        data-order-id="ORD-2025-001"
+        data-amount="499.00"
+        data-currency="INR"
+        data-description="Wheat Flour 5kg">
+  Buy Now — ₹499
+</button>
+```
+
+**Result:** Customer button click karega → ZeroPaye ka checkout modal khulega → payment → aapke bank mein.
+
+#### Option B: Payment link (WhatsApp / email / SMS pe bhejna)
+
+Agar aapki website nahi hai, toh **direct payment link** bhej sakte hain:
+
+```bash
+# Backend se session banao
+curl -X POST https://pay.aapkidukan.com/api/zeropaye/session \
+  -H "content-type: application/json" \
+  -d '{
+    "orderId": "WHATSAPP-001",
+    "amount": 1500,
+    "description": "Freelance design work",
+    "customerName": "Client name"
+  }'
+
+# Response mein session.id milega
+# Link bhejein: https://pay.aapkidukan.com/checkout/SESSION_ID
+```
+
+Customer link kholta hai → checkout page → pays → aapke bank mein. WhatsApp / email / SMS kahin bhi bhej sakte hain.
+
+#### Option C: React / Next.js / Vue app mein
+
+```javascript
+import { useEffect } from 'react';
+
+function ProductPage() {
+  useEffect(() => {
+    // ZeroPaye script load karein
+    const script = document.createElement('script');
+    script.src = 'https://pay.aapkidukan.com/zeropaye.js';
+    script.setAttribute('data-zeropaye-key', 'zp_xxx_your_public_key');
+    script.setAttribute('data-currency', 'INR');
+    document.head.appendChild(script);
+  }, []);
+
+  const handleBuy = () => {
+    window.ZeroPaye.pay({
+      order_id: 'ORD-' + Date.now(),
+      amount: 499.00,
+      currency: 'INR',
+      name: 'Sharma Kirana Store',
+      description: 'Wheat Flour 5kg',
+      handler: (response) => {
+        console.log('Payment success! UTR:', response.utr);
+        alert('Payment received! Order confirmed.');
+        // Yahan apna order fulfill logic likhein
+      },
+      onClose: () => {
+        console.log('Customer closed the modal');
+      },
+    });
+  };
+
+  return <button onClick={handleBuy}>Buy Now — ₹499</button>;
+}
+```
+
+---
+
+### 📲 Step 4: Bank observation setup karein (Payment verify karne ke liye)
+
+Yeh **sabse important step** hai. Jab customer pays karta hai, ZeroPaye ko pata chalna chahiye ki paisa aaya hai. Iske 3 tareeke hain:
+
+#### Tareeka 1: Android Observer App (recommended — automatic)
+
+1. **Android phone** rakhein jisme aapka bank SIM ho (jisme bank SMS aate hain)
+2. **ZeroPaye Observer APK** install karein (GitHub releases se download)
+3. App kholein → "Pair Device" → QR scan karein (merchant dashboard mein dikhega)
+4. App background mein chalti rahegi — jab bhi bank SMS aayega, automatically ZeroPaye server ko HMAC-signed payload bhej degi
+5. Payment **automatically verify** ho jayega
+
+**Fayda:** Fully automatic. Customer ko kuch nahi karna. 5-10 second mein payment confirm.
+
+#### Tareeka 2: Gmail Observer (backup channel)
+
+1. Apna Gmail (jo bank ke saath linked hai) connect karein
+2. Google Cloud OAuth2 credentials banayein ([setup guide](https://developers.google.com/gmail/api/quickstart))
+3. Gmail Observer service (`apps/gmail-observer`) chalayein
+4. Yeh har bank credit email ko parse karke ZeroPaye API ko bhej dega
+
+**Fayda:** Email se bhi verify hota hai (SMS fail ho toh backup).
+
+#### Tareeka 3: Manual confirmation (simplest — no setup)
+
+Agar koi observer setup nahi karna:
+
+1. Customer pays karta hai → aapko bank app mein SMS/mila
+2. Aap dashboard mein "Mark Paid" button click karein
+3. Amount + UTR enter karein
+4. ZeroPaye match karega aur payment confirm kar dega
+
+**Fayda:** Simple. **Nuksan:** Manual work — har payment par click karna padega.
+
+> 💡 **Recommendation:** Tareeka 1 (Android Observer) use karein. Ek baar setup, phir life-time automatic.
+
+---
+
+### 💰 Step 5: Pehli payment receive karein (End-to-end test)
+
+#### Test flow:
+1. **Aap:** Website pe product list karein (ya payment link bhejein)
+2. **Customer:** "Buy Now" click → checkout modal khulta hai
+3. **Customer:** Mobile daalta hai → WhatsApp OTP verify karta hai
+4. **Customer:** QR dekhta hai → GPay/PhonePe se scan → pays
+5. **Aapke bank mein:** Paisa turant aata hai
+6. **Android Observer:** Bank SMS detect karta hai → ZeroPaye API ko notify
+7. **ZeroPaye:** Payment `SUCCESS` mark karta hai → aapke server ko webhook bhejta hai
+8. **Aapka server:** Webhook verify karke order fulfill karta hai
+
+#### Pehla test karne ke liye:
+```bash
+# ₹1 ka test order banao
+curl -X POST https://pay.aapkidukan.com/api/zeropaye/session \
+  -H "content-type: application/json" \
+  -d '{"orderId":"TEST-001","amount":1,"description":"Test payment"}'
+
+# Response mein session.id milega — link open karein, pay karein
+# Apne bank app mein ₹1 credit check karein
+# Dashboard mein payment status "SUCCESS" hoga
+```
+
+---
+
+### 📊 Step 6: Dashboard use karein (daily operations)
+
+Merchant dashboard (`/dashboard` ya `/api/zeropaye/merchant` se access) mein:
+
+| Feature | Kya karta hai |
+|---|---|
+| 📈 **Live transactions** | Real-time payment status (INITIATED → SUCCESS) |
+| 🔄 **VPA slot status** | Active/Queued customer count |
+| 📱 **Observer health** | Android/Gmail/SMS observer online/offline |
+| 🎨 **White-label branding** | Custom name, logo, colors |
+| 📋 **Transaction history** | Last 50 payments with UTR, amount, customer |
+| 💰 **Fees saved tracker** | Kitna paisa bacha (vs 2.2% aggregator fee) |
+| 🔑 **API keys** | Public + admin key (admin key secret rakhein!) |
+
+#### Daily workflow:
+1. Subah dashboard kholiye → observer online check karein
+2. Customer payments aate rahenge — dashboard pe live dikhega
+3. End of day → "Total Settled" dekhiye → bank statement se match karein
+4. Har Friday → "Fees Saved" dekhiye → kitna bacha hisaab rakhne ke liye
+
+---
+
+### 🛡️ Step 7: Production checklist (asli use se pehle)
+
+#### ✅ Security:
+- [ ] `adminApiKey` kisi ko nahi diya (git mein committed nahi hai?)
+- [ ] `webhookSecret` rotate kiya (default se nahi chala rahe?)
+- [ ] HTTPS enabled hai (Let's Encrypt / Caddy use karein)
+- [ ] `.env` file `.gitignore` mein hai
+- [ ] Database backup setup hai (daily cron)
+- [ ] Server par firewall on hai (sirf 80/443 port open)
+
+#### ✅ Reliability:
+- [ ] PM2 ya systemd se server auto-restart ho raha hai
+- [ ] Android Observer phone 24/7 on hai (charging laga rahe)
+- [ ] Gmail Observer (backup) running hai
+- [ ] `/health` endpoint monitoring (UptimeRobot, Pingdom)
+- [ ] Daily DB backup (SQLite file ka snapshot)
+
+#### ✅ Business:
+- [ ] Test payment ₹1 se kiya (paisa bank mein aaya?)
+- [ ] UPI VPA sahi hai? (`yourname@okhdfcbank` jaisa)
+- [ ] Customer support email/WhatsApp ready
+- [ ] Refund policy documented (ZeroPaye mein refund manual hota hai — UPI se wapas bhejna padta hai)
+- [ ] GST invoicing setup (ZeroPaye fees nahi kat-ta, isliye GST straightforward)
+
+---
+
+### ❓ Common merchant sawaal (FAQ)
+
+#### Q: Kya ZeroPaye se paisa seedhe mere bank mein aata hai?
+**A:** Haan. ZeroPaye koi "intermediary" nahi hai. Customer aapke UPI VPA par pays karta hai (jaise GPay se kisi ko paisa bhejna). Paisa seedhe aapke bank account mein. ZeroPaye sirf verify karta hai ki payment aayi.
+
+#### Q: Agar server down ho gaya toh payments kya honge?
+**A:** Customer ko QR dikhega nahi (kyunki ZeroPaye down hai), isliye naya payment start hi nahi hoga. Lekin jo payments already `SUCCESS` hain, woh safe hain — paisa aapke bank mein hai. Server wapas up hote hi pending observations process ho jayenge.
+
+#### Q: Refund kaise karein?
+**A:** ZeroPaye automatic refund nahi karta (kyunki paisa aapke bank mein hai, ZeroPaye ke paas nahi). Refund ke liye aapko apne UPI app se customer ko wapas bhejna padega. Phir dashboard mein "Refund issued" mark karein.
+
+#### Q: Multiple dukaan hain, ek hi ZeroPaye se chala sakte hain?
+**A:** Haan. v1.2 mein multi-tenant support aayega. Abhi har dukaan ke liye alag ZeroPaye instance chalayein.
+
+#### Q: Customer ne payment ki but ZeroPaye mein "SUCCESS" nahi dikha?
+**A:** 3 possible reasons:
+1. **Observer down hai** → Android app check karein (battery, network)
+2. **Bank SMS late aaya** → 5-min window expire ho gayi → "Mark Paid" manually karein
+3. **Amount mismatch** → Customer ne galat amount pay kiya → Dashboard mein exact paise check karein
+
+#### Q: Ek time pe kitne customers pay kar sakte hain?
+**A:** Ek VPA par ek time pe **sirf ek payment** (single-slot FIFO queue). Baki queue mein wait karenge. Yeh UPI ki limitation hai (SMS mein order ID nahi hota). Agar high volume chahiye toh multiple VPA use karein.
+
+#### Q: GST invoice generate hota hai?
+**A:** ZeroPaye invoice generate nahi karta (v1.2 mein aayega). Abhi apne accounting software (Tally, Zoho) mein manual entry karein. KYA — ZeroPaye ki koi fees nahi hai, isliye GST bhi simple hai.
+
+#### Q: International customers pay kar sakte hain?
+**A:** Nahi. ZeroPaye sirf Bharat ke UPI ecosystem ke liye hai. International ke liye Stripe/Razorpay use karein.
+
+#### Q: Mera WhatsApp account ban toh nahi hoga OTP bhejne se?
+**A:** ZeroPaye ka demo mode WhatsApp use nahi karta — OTP screen pe dikhta hai. Production setup mein WhatsApp Business API use karein (official, ToS-compliant). Personal WhatsApp pe automation ToS violation hai.
+
+---
+
+### 🎯 Merchant types ke liye quick recommendations
+
+| Merchant | Best setup | Time to go live |
+|---|---|---|
+| 🏪 **Kirana / offline shop** | Android Observer + Counter QR | 30 min |
+| 🌐 **Shopify/WooCommerce store** | Website embed script + Android Observer | 1 hour |
+| 📱 **Freelancer (no website)** | Payment link via WhatsApp + Manual confirm | 15 min |
+| 🎨 **Creator (courses, digital products)** | Website embed + Gmail Observer | 45 min |
+| 🏢 **SaaS startup** | API integration + Android Observer + webhooks | 2-3 hours |
+
+> 💡 **Sabse aasan tarika:** Android Observer + Manual confirmation. 15 min mein live. Phir progressively automate karein.
+
+---
+
+<br/>
+
+---
+
 ## 🔒 Kya yeh safe hai? (Is this secure?)
 
 **Haan, bilkul.** Humne ZeroPaye ko ek **pura security audit** ke baad banaya hai. Original code (YouPI-PG) mein 105 issues mile the (13 CRITICAL) — humne sab fix kiye:
