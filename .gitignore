@@ -50,3 +50,6 @@ worklog.md
 
 # Demo observer signing key (audit NEW-09)
 .demo-observer-key
+
+# Backups
+/backups/

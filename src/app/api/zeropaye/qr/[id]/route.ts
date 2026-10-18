@@ -1,6 +1,8 @@
 // ZeroPaye API — Generate QR code SVG for a payment session
 // GET /api/zeropaye/qr/[id]
 // Returns a vector SVG QR encoding the UPI intent URI. (Invariant 4)
+// Audit NEW-26 fix: only return QR for ACTIVE/PROCESSING sessions.
+// Expired/SUCCESS/FAILED sessions return 410 Gone.
 
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
@@ -15,6 +17,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   const session = await db.paymentSession.findUnique({ where: { id } });
   if (!session) return jsonErr(404, "Session not found");
+
+  // Audit NEW-26: don't render QR for terminal/expired sessions
+  if (!["ACTIVE", "PROCESSING", "AUTHENTICATED", "AUTH_PENDING"].includes(session.status)) {
+    return jsonErr(410, `Session is ${session.status} — QR no longer available`);
+  }
 
   const account = session.receivingAccountId
     ? await db.receivingAccount.findUnique({ where: { id: session.receivingAccountId } })
