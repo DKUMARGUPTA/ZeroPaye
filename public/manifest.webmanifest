@@ -1,0 +1,58 @@
+{
+  "name": "ZeroPaye — Zero-fee UPI Payment Gateway",
+  "short_name": "ZeroPaye",
+  "description": "Bharat ka apna 100% open-source, zero-fee UPI payment gateway. Zero • Empowering • Reliable • Open • Payé.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0d9488",
+  "orientation": "portrait-primary",
+  "categories": ["finance", "business", "productivity"],
+  "lang": "en-IN",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/screenshots/zeropaye-hero.png",
+      "sizes": "1344x768",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/v2-01-hero.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "label": "ZeroPaye homepage with hero section"
+    },
+    {
+      "src": "/screenshots/v2-04-dashboard.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "label": "Merchant dashboard with live transactions"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Demo",
+      "url": "/live-demo",
+      "description": "Try the interactive UPI checkout demo"
+    },
+    {
+      "name": "Documentation",
+      "url": "/docs",
+      "description": "Read the docs"
+    },
+    {
+      "name": "API Reference",
+      "url": "/api-reference",
+      "description": "12 REST API endpoints"
+    }
+  ]
+}
