@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "backup": "bun run scripts/backup-db.ts"
+    "backup": "bun run scripts/backup-db.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

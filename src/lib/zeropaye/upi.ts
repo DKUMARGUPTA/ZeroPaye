@@ -34,9 +34,9 @@ export function isValidIndianMobile(mobile: string): boolean {
   return /^[6-9]\d{9}$/.test(String(mobile).replace(/[\s+-]/g, ""));
 }
 
-/** Validate a UPI VPA format: name@bank-handle. */
+/** Validate a UPI VPA format (audit NEW-23 — tightened). */
 export function isValidVpa(vpa: string): boolean {
-  return /^[\w.\-]{2,}@[\w.\-]{2,}$/.test(String(vpa || ""));
+  return /^[a-zA-Z0-9._-]{2,64}@[a-zA-Z0-9][a-zA-Z0-9._-]{1,63}$/.test(String(vpa || ""));
 }
 
 /** Validate 12-digit UTR / bank reference. */
