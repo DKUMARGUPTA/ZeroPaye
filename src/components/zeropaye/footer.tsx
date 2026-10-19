@@ -1,12 +1,36 @@
 "use client";
 
+import Link from "next/link";
 import { ShieldCheck, Heart, Github } from "lucide-react";
 
-const LINKS = {
-  Product: ["Live Demo", "Dashboard", "Security", "Developers", "Free Forever"],
-  Community: ["GitHub", "Issues", "Discussions", "Contributing", "Code of Conduct"],
-  Resources: ["Documentation", "API Reference", "Architecture", "Self-Host Guide", "White-Label"],
-  Legal: ["AGPL-3.0 License", "Privacy (we don't track)", "Security Disclosure", "No Cookies"],
+const LINKS: Record<string, { name: string; href: string; external?: boolean }[]> = {
+  Product: [
+    { name: "Live Demo", href: "/live-demo" },
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Security", href: "/security" },
+    { name: "Developers", href: "/developers" },
+    { name: "Free Forever", href: "/free-forever" },
+  ],
+  Community: [
+    { name: "GitHub", href: "https://github.com/DKUMARGUPTA/ZeroPaye", external: true },
+    { name: "Issues", href: "/issues" },
+    { name: "Discussions", href: "/discussions" },
+    { name: "Contributing", href: "/contributing" },
+    { name: "Code of Conduct", href: "/code-of-conduct" },
+  ],
+  Resources: [
+    { name: "Documentation", href: "/docs" },
+    { name: "API Reference", href: "/api-reference" },
+    { name: "Architecture", href: "/architecture" },
+    { name: "Self-Host Guide", href: "/self-host-guide" },
+    { name: "White-Label", href: "/white-label" },
+  ],
+  Legal: [
+    { name: "AGPL-3.0 License", href: "/license" },
+    { name: "Privacy (we don't track)", href: "/privacy" },
+    { name: "Security Disclosure", href: "/security-disclosure" },
+    { name: "No Cookies", href: "/no-cookies" },
+  ],
 };
 
 export function Footer() {
@@ -59,8 +83,21 @@ export function Footer() {
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">{group}</h4>
                 <ul className="mt-3 space-y-2">
                   {items.map((l) => (
-                    <li key={l}>
-                      <a href="#" className="text-xs text-muted-foreground hover:text-foreground transition-colors">{l}</a>
+                    <li key={l.name}>
+                      {l.external ? (
+                        <a
+                          href={l.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {l.name}
+                        </a>
+                      ) : (
+                        <Link href={l.href} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                          {l.name}
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>
