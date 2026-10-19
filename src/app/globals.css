@@ -41,75 +41,106 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 16px);
 }
 
+/* ===========================================================
+   ZeroPaye v2.0 Design System — 2026 modern fintech aesthetic
+   Light: clean white + teal/emerald accents + soft shadows
+   Dark: deep slate + glassmorphism + neon teal glow
+   =========================================================== */
+
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --radius: 0.875rem;
+
+  /* Light — clean, airy, professional fintech */
+  --background: oklch(0.99 0.005 200);
+  --foreground: oklch(0.18 0.02 230);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.18 0.02 230);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.18 0.02 230);
+  --primary: oklch(0.55 0.13 180);         /* teal-600 */
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0.005 200);
+  --secondary-foreground: oklch(0.25 0.02 230);
+  --muted: oklch(0.97 0.005 200);
+  --muted-foreground: oklch(0.52 0.015 230);
+  --accent: oklch(0.93 0.04 180);
+  --accent-foreground: oklch(0.30 0.05 180);
+  --destructive: oklch(0.58 0.24 27);
+  --border: oklch(0.92 0.005 230);
+  --input: oklch(0.94 0.005 230);
+  --ring: oklch(0.55 0.13 180);
+
+  /* Modern gradient tokens */
+  --gradient-brand: linear-gradient(135deg, #0d9488 0%, #0891b2 50%, #06b6d4 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(13,148,136,0.08) 0%, rgba(8,145,178,0.08) 100%);
+  --gradient-glow: radial-gradient(ellipse at top, rgba(13,148,136,0.12), transparent 60%);
+
+  /* Glass effect tokens */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.6);
+
+  --chart-1: oklch(0.55 0.13 180);
+  --chart-2: oklch(0.60 0.14 165);
+  --chart-3: oklch(0.65 0.15 145);
+  --chart-4: oklch(0.70 0.14 90);
+  --chart-5: oklch(0.60 0.18 60);
+  --sidebar: oklch(0.985 0.005 200);
+  --sidebar-foreground: oklch(0.18 0.02 230);
+  --sidebar-primary: oklch(0.55 0.13 180);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.96 0.005 200);
+  --sidebar-accent-foreground: oklch(0.25 0.02 230);
+  --sidebar-border: oklch(0.92 0.005 230);
+  --sidebar-ring: oklch(0.55 0.13 180);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Dark — deep slate + glassmorphism + neon teal glow */
+  --background: oklch(0.14 0.02 230);
+  --foreground: oklch(0.96 0.01 200);
+  --card: oklch(0.18 0.025 230);
+  --card-foreground: oklch(0.96 0.01 200);
+  --popover: oklch(0.20 0.025 230);
+  --popover-foreground: oklch(0.96 0.01 200);
+  --primary: oklch(0.72 0.14 180);         /* brighter teal for dark mode */
+  --primary-foreground: oklch(0.14 0.02 230);
+  --secondary: oklch(0.22 0.02 230);
+  --secondary-foreground: oklch(0.96 0.01 200);
+  --muted: oklch(0.22 0.025 230);
+  --muted-foreground: oklch(0.68 0.015 220);
+  --accent: oklch(0.26 0.04 180);
+  --accent-foreground: oklch(0.85 0.10 180);
+  --destructive: oklch(0.70 0.20 22);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.72 0.14 180);
+
+  /* Dark gradients + glow */
+  --gradient-brand: linear-gradient(135deg, #2dd4bf 0%, #22d3ee 50%, #06b6d4 100%);
+  --gradient-brand-soft: linear-gradient(135deg, rgba(45,212,191,0.12) 0%, rgba(34,211,238,0.12) 100%);
+  --gradient-glow: radial-gradient(ellipse at top, rgba(45,212,191,0.18), transparent 60%);
+
+  /* Dark glass */
+  --glass-bg: rgba(28, 35, 48, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  --chart-1: oklch(0.72 0.14 180);
+  --chart-2: oklch(0.70 0.13 165);
+  --chart-3: oklch(0.72 0.15 145);
+  --chart-4: oklch(0.75 0.14 90);
+  --chart-5: oklch(0.70 0.18 60);
+  --sidebar: oklch(0.18 0.025 230);
+  --sidebar-foreground: oklch(0.96 0.01 200);
+  --sidebar-primary: oklch(0.72 0.14 180);
+  --sidebar-primary-foreground: oklch(0.14 0.02 230);
+  --sidebar-accent: oklch(0.22 0.02 230);
+  --sidebar-accent-foreground: oklch(0.96 0.01 200);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.72 0.14 180);
 }
 
 @layer base {
@@ -118,29 +149,202 @@
   }
   html {
     @apply overflow-x-hidden scroll-smooth;
+    scroll-behavior: smooth;
   }
   body {
-    @apply bg-background text-foreground overflow-x-hidden;
-    /* Phase 3: prevent horizontal scroll on mobile from decorative gradient divs */
+    @apply bg-background text-foreground overflow-x-hidden antialiased;
     -webkit-text-size-adjust: 100%;
+    font-feature-settings: "ss01", "cv01", "cv02";
   }
-  /* Phase 3: visible focus ring for keyboard navigation (accessibility) */
   :focus-visible {
-    @apply outline-2 outline-offset-2 outline-teal-500;
+    @apply outline-2 outline-offset-2;
+    outline-color: var(--primary);
   }
-  /* Custom scrollbar for overflow areas */
-  .scroll-area::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
   }
-  .scroll-area::-webkit-scrollbar-track {
+  ::-webkit-scrollbar-track {
     background: transparent;
   }
-  .scroll-area::-webkit-scrollbar-thumb {
+  ::-webkit-scrollbar-thumb {
     background: var(--border);
-    border-radius: 4px;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
-  .scroll-area::-webkit-scrollbar-thumb:hover {
+  ::-webkit-scrollbar-thumb:hover {
     background: var(--muted-foreground);
+    background-clip: content-box;
+  }
+}
+
+/* ===========================================================
+   ZeroPaye v2.0 — Modern utility classes
+   =========================================================== */
+
+@layer utilities {
+  /* Glassmorphism card */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--glass-border);
+  }
+
+  /* Brand gradient text */
+  .text-gradient {
+    background: var(--gradient-brand);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* Brand gradient background */
+  .bg-gradient-brand {
+    background: var(--gradient-brand);
+  }
+  .bg-gradient-brand-soft {
+    background: var(--gradient-brand-soft);
+  }
+
+  /* Glow effects */
+  .glow-teal {
+    box-shadow: 0 0 40px -10px rgba(13, 148, 136, 0.4);
+  }
+  .glow-teal-strong {
+    box-shadow: 0 0 60px -10px rgba(13, 148, 136, 0.6);
+  }
+  .dark .glow-teal {
+    box-shadow: 0 0 40px -10px rgba(45, 212, 191, 0.5);
+  }
+  .dark .glow-teal-strong {
+    box-shadow: 0 0 60px -10px rgba(45, 212, 191, 0.7);
+  }
+
+  /* Animated grid background (cyberpunk-ish, subtle) */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, var(--border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  /* Subtle dotted background */
+  .bg-dots {
+    background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Mask fade (for backgrounds) */
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  }
+  .mask-fade-r {
+    mask-image: linear-gradient(to right, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 70%, transparent 100%);
+  }
+
+  /* Shimmer animation (for skeletons / loading) */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(13, 148, 136, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Animated gradient border */
+  .border-gradient {
+    position: relative;
+    background: var(--card);
+    border-radius: var(--radius-2xl);
+  }
+  .border-gradient::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--gradient-brand);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+  }
+  .border-gradient:hover::before {
+    opacity: 1;
+  }
+}
+
+/* ===========================================================
+   Keyframe animations
+   =========================================================== */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes gradient-pan {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.animate-gradient-pan {
+  background-size: 200% 200%;
+  animation: gradient-pan 8s ease infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(13, 148, 136, 0); }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Scroll reveal */
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-reveal-up {
+  animation: reveal-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Marquee for trust badges / logos */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/* Reduce motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
