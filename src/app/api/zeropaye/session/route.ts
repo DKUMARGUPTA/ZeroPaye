@@ -10,6 +10,7 @@ import { toPaise } from "@/lib/zeropaye/money";
 import { jsonOk, jsonErr, getClientIp, getUserAgent, getRequestId, rateLimit } from "@/lib/zeropaye/security";
 import { requireAdmin } from "@/lib/zeropaye/admin-auth";
 import { isValidOrderId, isValidCurrency, getIdempotencyKey } from "@/lib/zeropaye/validation";
+import { isDemoMode, getDemoMerchantData, createDemoSession, findDemoSession, getDemoSessions, updateDemoSession } from "@/lib/zeropaye/demo-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +22,12 @@ export async function POST(req: NextRequest) {
     const { orderId, amount, currency, description, customerName, publicApiKey } = body || {};
 
     // v3.0 C5 fix: verify publicApiKey (was ignored — trust-the-client)
-    const { merchant, account } = await getDemoMerchant();
+    // v3.3: In demo mode, use demo merchant data (no DB needed)
+    const demoMerchant = isDemoMode() ? getDemoMerchantData() : null;
+    const { merchant, account } = demoMerchant
+      ? { merchant: demoMerchant as any, account: null }
+      : await getDemoMerchant();
+
     if (publicApiKey && publicApiKey !== merchant.publicApiKey) {
       return jsonErr(401, "Invalid publicApiKey");
     }
@@ -93,6 +99,27 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // v3.3: Demo mode — use in-memory data
+    if (isDemoMode()) {
+      // Check existing session (idempotency)
+      const sessions = getDemoSessions();
+      const existingDemo = sessions.find(s =>
+        s.orderId === orderId &&
+        ["INITIATED", "AUTH_PENDING", "AUTHENTICATED", "QUEUED", "ACTIVE", "PROCESSING"].includes(s.status)
+      );
+      if (existingDemo) {
+        const amountDiff = Math.abs(existingDemo.amountPaise - amountPaise);
+        if (amountDiff > 99) {
+          return jsonErr(409, `orderId "${orderId}" already exists with a different amount.`);
+        }
+        return jsonOk({ session: serializeDemo(existingDemo), merchant: { publicApiKey: merchant.publicApiKey, businessName: merchant.businessName } });
+      }
+
+      // Create new session (in-memory)
+      const session = createDemoSession(orderId, amountPaise, description?.toString(), customerName?.toString());
+      return jsonOk({ session: serializeDemo(session), merchant: { publicApiKey: merchant.publicApiKey, businessName: merchant.businessName } });
+    }
+
     // v3.0 C5 fix: orderId collision with DIFFERENT amount → 409 (not return old session)
     // Prevents attacker from pre-creating ₹1 session with same orderId.
     // v3.2 fix: allow tolerance of 99 paise (unique-paise suffix range) for same orderId.
@@ -161,12 +188,40 @@ export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin.ok) return admin.response;
   const { merchant } = admin;
+
+  // v3.3: Demo mode — return in-memory sessions
+  if (isDemoMode()) {
+    const sessions = getDemoSessions();
+    return jsonOk({ sessions: sessions.map(serializeDemo) });
+  }
+
   const sessions = await db.paymentSession.findMany({
     where: { merchantId: merchant.id },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
   return jsonOk({ sessions: sessions.map(serialize) });
+}
+
+function serializeDemo(s: any) {
+  return {
+    id: s.id,
+    orderId: s.orderId,
+    amountPaise: s.amountPaise,
+    amountRupees: (s.amountPaise / 100).toFixed(2),
+    currency: s.currency || "INR",
+    description: s.description,
+    customerName: s.customerName,
+    status: s.status,
+    queuePosition: s.queuePosition,
+    utr: s.utr,
+    verificationTier: s.verificationTier,
+    expiresAt: s.expiresAt,
+    activatedAt: s.activatedAt,
+    processingAt: s.processingAt,
+    settledAt: s.settledAt,
+    createdAt: s.createdAt,
+  };
 }
 
 function serialize(s: any) {

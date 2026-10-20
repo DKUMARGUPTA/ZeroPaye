@@ -5,12 +5,48 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { jsonOk, jsonErr } from "@/lib/zeropaye/security";
+import { isDemoMode, findDemoSession, getDemoAccountData, updateDemoSession } from "@/lib/zeropaye/demo-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
+
+  // v3.3: Demo mode — use in-memory data
+  if (isDemoMode()) {
+    const session = findDemoSession(id);
+    if (!session) return jsonErr(404, "Session not found");
+    const account = getDemoAccountData();
+    // Check expiry
+    if (session.status === "ACTIVE" && session.expiresAt) {
+      if (new Date(session.expiresAt).getTime() < Date.now()) {
+        updateDemoSession(id, { status: "EXPIRED" });
+        session.status = "EXPIRED";
+      }
+    }
+    return jsonOk({
+      session: {
+        id: session.id, orderId: session.orderId,
+        amountPaise: session.amountPaise,
+        amountRupees: (session.amountPaise / 100).toFixed(2),
+        currency: session.currency,
+        description: session.description,
+        customerName: session.customerName,
+        status: session.status,
+        queuePosition: session.queuePosition,
+        utr: session.utr,
+        verificationTier: session.verificationTier,
+        expiresAt: session.expiresAt,
+        activatedAt: session.activatedAt,
+        processingAt: session.processingAt,
+        settledAt: session.settledAt,
+        createdAt: session.createdAt,
+      },
+      account: { vpa: account.vpa, accountName: account.accountName, isSlotBusy: account.isSlotBusy, dailyLimitPaise: account.dailyLimitPaise },
+    });
+  }
+
   const session = await db.paymentSession.findUnique({ where: { id } });
   if (!session) return jsonErr(404, "Session not found");
 
