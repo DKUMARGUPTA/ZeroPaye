@@ -16,7 +16,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { buildUpiUri } from "@/lib/zeropaye/upi";
 import { formatINR } from "@/lib/zeropaye/money";
-import { jsonOk, jsonErr, getRequestId, getClientIp, isSsrfSafe, getDemoMerchant } from "@/lib/zeropaye/security";
+import { jsonOk, jsonErr, getRequestId, getClientIp, isSsrfSafe } from "@/lib/zeropaye/security";
 import { sha256Hex, uuid, hmacSha256 } from "@/lib/zeropaye/crypto";
 import { randomInt } from "node:crypto";
 import { requireAdmin, requireDevMode } from "@/lib/zeropaye/admin-auth";
