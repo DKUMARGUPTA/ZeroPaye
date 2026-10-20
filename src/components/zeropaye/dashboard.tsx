@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Activity, Banknote, CheckCircle2, Clock, CreditCard, Loader2,
   Server, Smartphone, TrendingUp, Users, Zap, ShieldCheck, Copy, ArrowUpRight,
+  AlertCircle,
 } from "lucide-react";
 import { formatINR, formatINRCompact } from "@/lib/zeropaye/money";
 
