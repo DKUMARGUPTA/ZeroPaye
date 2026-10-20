@@ -29,10 +29,40 @@ export async function PATCH(req: NextRequest) {
     const { merchant } = admin;
 
     const body = await req.json().catch(() => ({}));
-    const { defaultVpa, branding } = body;
+    const { defaultVpa, branding, webhookUrl, webhookSecret } = body;
 
     // Build update data
     const updateData: any = {};
+
+    // v3.0 C1 fix: allow setting webhookUrl (was missing — merchant couldn't set webhook target)
+    if (webhookUrl !== undefined) {
+      if (webhookUrl === null || webhookUrl === "") {
+        updateData.webhookUrl = null;
+      } else {
+        try {
+          const u = new URL(webhookUrl);
+          if (!["http:", "https:"].includes(u.protocol)) {
+            return jsonErr(400, "webhookUrl must be HTTP or HTTPS");
+          }
+          if (process.env.NODE_ENV === "production" && u.protocol !== "https:") {
+            return jsonErr(400, "webhookUrl must be HTTPS in production");
+          }
+          updateData.webhookUrl = String(webhookUrl);
+        } catch {
+          return jsonErr(400, "webhookUrl must be a valid URL");
+        }
+      }
+    }
+
+    // v3.0: allow rotating webhookSecret (was generated once, never changeable)
+    if (webhookSecret !== undefined) {
+      if (typeof webhookSecret !== "string" || webhookSecret.length < 16) {
+        return jsonErr(400, "webhookSecret must be at least 16 characters");
+      }
+      updateData.webhookSecret = webhookSecret;
+      // Invalidate cache so new secret is used immediately
+      invalidateDemoMerchantCache();
+    }
 
     // Validate + set VPA
     if (defaultVpa !== undefined) {

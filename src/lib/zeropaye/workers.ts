@@ -207,7 +207,7 @@ async function sweepStaleSessions() {
               status: "ACTIVE",
               queuePosition: null,
               activatedAt: new Date(),
-              expiresAt: new Date(Date.now() + 5 * 60_1000),
+              expiresAt: new Date(Date.now() + 5 * 60 * 1000), // v3.0 fix: was 5 * 60_1000 = 300,000 (50 min!), now 5 * 60 * 1000 = 300,000 (5 min)
             },
           });
           await tx.receivingAccount.update({

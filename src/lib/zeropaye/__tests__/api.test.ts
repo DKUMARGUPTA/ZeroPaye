@@ -73,19 +73,19 @@ describe.skipIf(!serverUp)("API integration — /session creation", () => {
     expect(data.error).toContain("orderId");
   });
 
-  it("rejects invalid currency", async () => {
+  it("rejects non-INR currency", async () => {
     const res = await fetch(`${BASE}/api/zeropaye/session`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         orderId: `TEST-${Date.now()}`,
         amount: 100,
-        currency: "invalid",
+        currency: "USD",
       }),
     });
     expect(res.status).toBe(400);
     const data = await res.json();
-    expect(data.error).toContain("currency");
+    expect(data.error).toContain("INR");
   });
 
   it("rejects amount below minimum", async () => {

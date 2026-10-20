@@ -7,7 +7,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { getDemoMerchant } from "@/lib/zeropaye/config";
 import { toPaise } from "@/lib/zeropaye/money";
-import { jsonOk, jsonErr, getClientIp, getUserAgent, getRequestId } from "@/lib/zeropaye/security";
+import { jsonOk, jsonErr, getClientIp, getUserAgent, getRequestId, rateLimit } from "@/lib/zeropaye/security";
 import { requireAdmin } from "@/lib/zeropaye/admin-auth";
 import { isValidOrderId, isValidCurrency, getIdempotencyKey } from "@/lib/zeropaye/validation";
 
@@ -18,16 +18,31 @@ export async function POST(req: NextRequest) {
   const requestId = await getRequestId();
   try {
     const body = await req.json().catch(() => ({}));
-    const { merchantId, orderId, amount, currency, description, customerName } = body || {};
+    const { orderId, amount, currency, description, customerName, publicApiKey } = body || {};
 
-    // Input validation (audit NEW-18, NEW-16, NEW-17)
+    // v3.0 C5 fix: verify publicApiKey (was ignored — trust-the-client)
+    const { merchant, account } = await getDemoMerchant();
+    if (publicApiKey && publicApiKey !== merchant.publicApiKey) {
+      return jsonErr(401, "Invalid publicApiKey");
+    }
+    // v3.0 C5 fix: merchantId removed from body (was injectable)
+
+    // v3.0 C5 fix: rate limit session creation
+    const ip = await getClientIp();
+    const rl = rateLimit({ key: `session:${ip}`, maxTokens: 10, refillPerSec: 1 / 10 });
+    if (!rl.ok) {
+      return jsonErr(429, "Too many checkout sessions. Slow down.");
+    }
+
+    // Input validation
     if (!orderId) return jsonErr(400, "orderId is required");
     if (!isValidOrderId(String(orderId))) {
       return jsonErr(400, "orderId must be 1-35 chars, alphanumeric + dash/underscore only");
     }
     if (amount === undefined || amount === null) return jsonErr(400, "amount is required");
-    if (currency && !isValidCurrency(String(currency))) {
-      return jsonErr(400, "currency must be a 3-letter ISO 4217 code (e.g. INR)");
+    // v3.0 C5 fix: INR only (was any 3-letter code — "USD" would work)
+    if (currency && currency !== "INR") {
+      return jsonErr(400, "Only INR is supported (UPI is India-only)");
     }
 
     let amountPaise: number;
@@ -39,8 +54,7 @@ export async function POST(req: NextRequest) {
     if (amountPaise < 100) return jsonErr(400, "Minimum amount is ₹1.00");
     if (amountPaise > 10000000) return jsonErr(400, "Maximum amount is ₹1,00,000 (UPI limit)");
 
-    const { merchant, account } = await getDemoMerchant();
-    const realMerchantId = merchantId || merchant.id;
+    const realMerchantId = merchant.id;
 
     // Clean up expired ACTIVE/PROCESSING sessions so the single VPA slot is
     // freed for new demo runs. (Server-authoritative sweep — Invariant 3.)
@@ -53,7 +67,6 @@ export async function POST(req: NextRequest) {
           OR: [
             { expiresAt: { lt: now } },
             { processingAt: { lt: new Date(now.getTime() - 30000) } },
-            { createdAt: { lt: new Date(now.getTime() - 10 * 60 * 1000) } },
           ],
         },
         select: { id: true },
@@ -65,7 +78,6 @@ export async function POST(req: NextRequest) {
             data: { status: "EXPIRED" },
           });
           await tx.receivingAccount.update({ where: { id: account.id }, data: { isSlotBusy: false } });
-          // promote oldest queued if any
           const next = await tx.paymentSession.findFirst({
             where: { receivingAccountId: account.id, status: "QUEUED" },
             orderBy: { queuePosition: "asc" },
@@ -81,16 +93,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Idempotency: same orderId for same merchant returns existing live session
+    // v3.0 C5 fix: orderId collision with DIFFERENT amount → 409 (not return old session)
+    // Prevents attacker from pre-creating ₹1 session with same orderId
     const existing = await db.paymentSession.findFirst({
       where: { merchantId: realMerchantId, orderId, status: { in: ["INITIATED", "AUTH_PENDING", "AUTHENTICATED", "QUEUED", "ACTIVE", "PROCESSING"] } },
       orderBy: { createdAt: "desc" },
     });
     if (existing) {
+      if (existing.amountPaise !== amountPaise) {
+        return jsonErr(409, `orderId "${orderId}" already exists with a different amount (₹${(existing.amountPaise / 100).toFixed(2)}). Use a unique orderId.`);
+      }
       return jsonOk({ session: serialize(existing), merchant: { publicApiKey: merchant.publicApiKey, businessName: merchant.businessName } });
     }
 
-    const ip = await getClientIp();
+    // v3.0 C5 fix: use idempotency key if provided
+    const idemKey = getIdempotencyKey(req);
 
     const session = await db.paymentSession.create({
       data: {

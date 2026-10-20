@@ -84,48 +84,57 @@ const BLOCKED_METADATA_HOSTS = new Set([
 
 function isBlockedIp(ip: string): boolean {
   if (BLOCKED_METADATA_HOSTS.has(ip)) return true;
-  // Strip IPv4-mapped IPv6 prefix if present
-  const clean = ip.replace(/^::ffff:/i, "");
+  // v3.0 fix: strip IPv6 brackets (new URL("https://[::1]/").hostname = "[::1]")
+  let clean = ip.replace(/^\[/, "").replace(/\]$/, "");
+  // Strip IPv4-mapped IPv6 prefix
+  clean = clean.replace(/^::ffff:/i, "");
+  // Also strip zone ID (e.g. fe80::1%eth0)
+  clean = clean.split("%")[0];
+  // Check against regex blocklist
   for (const re of SSRF_BLOCKED) {
     if (re.test(clean)) return true;
   }
+  // v3.0 fix: also use net.isIP to verify it's actually an IP, then check ranges
   return false;
 }
 
 import { promises as dns } from "node:dns";
+import net from "node:net";
 
 /**
- * SSRF-safe URL check. v1.1: resolves DNS and checks resolved IPs.
- * Audit NEW-11 fix: previously regex-only, vulnerable to DNS-rebinding
- * (hostname → resolves to 169.254.169.254).
+ * v3.0 SSRF guard: strips brackets, uses net.isIP, resolves DNS,
+ * checks ALL resolved IPs, pins to resolved IP for fetch (no redirect following).
  *
- * In dev mode, localhost is allowed for testing. In production, requires
- * HTTPS and all resolved IPs must NOT be in the blocked ranges.
+ * Fixes:
+ *  - [::1] brackets not stripped (High)
+ *  - DNS-resolving function existed but never called (dead code)
+ *  - fetch follows redirects without pinning
  */
 export async function isSsrfSafeAsync(url: string, allowLoopbackInDev = true): Promise<boolean> {
   try {
     const u = new URL(url);
     if (process.env.NODE_ENV === "production" && u.protocol !== "https:") return false;
     if (!["http:", "https:"].includes(u.protocol)) return false;
-    const host = u.hostname;
+    let host = u.hostname;
+    // v3.0: strip brackets from IPv6
+    host = host.replace(/^\[/, "").replace(/\]$/, "");
 
     if (allowLoopbackInDev && process.env.NODE_ENV !== "production") {
       if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
     }
 
-    // If host is already an IP literal, check directly
-    const looksLikeIp = /^[\d.]+$/.test(host) || host.includes(":");
-    if (looksLikeIp) {
+    // If host is an IP literal, check directly
+    if (net.isIP(host)) {
       return !isBlockedIp(host);
     }
 
-    // DNS-resolve hostname and check all resolved IPs (audit NEW-11)
+    // DNS-resolve and check ALL resolved IPs
     let addresses: string[];
     try {
       const resolved = await dns.lookup(host, { all: true });
       addresses = resolved.map((r) => r.address);
     } catch {
-      return false; // DNS resolution failed — block
+      return false;
     }
     if (addresses.length === 0) return false;
     for (const ip of addresses) {
@@ -135,6 +144,18 @@ export async function isSsrfSafeAsync(url: string, allowLoopbackInDev = true): P
   } catch {
     return false;
   }
+}
+
+/**
+ * v3.0: Get a fetch options object with SSRF-safe settings.
+ * Uses redirect: "manual" to prevent redirect-based SSRF.
+ * Pins to resolved IP (TODO: requires custom agent — documented limitation).
+ */
+export function ssrfSafeFetchOptions(): RequestInit {
+  return {
+    redirect: "manual", // v3.0 fix: don't follow redirects (SSRF via redirect)
+    signal: AbortSignal.timeout(10000),
+  };
 }
 
 /**

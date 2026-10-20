@@ -14,6 +14,11 @@
 export function toPaise(input: string | number): number {
   if (typeof input === "number") {
     if (!Number.isFinite(input) || input < 0) throw new Error("Invalid amount");
+    // v3.0 POC1 fix: reject >2 decimal places (was silently rounding 499.999 → 500.00)
+    const str = String(input);
+    if (str.includes(".") && str.split(".")[1]?.length > 2) {
+      throw new Error("Amount has more than 2 decimal places (max: 499.99)");
+    }
     return Math.round(input * 100);
   }
   const cleaned = String(input).replace(/[, ]/g, "").trim();

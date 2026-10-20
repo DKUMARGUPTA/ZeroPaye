@@ -1,5 +1,5 @@
 /*!
- * ZeroPaye Checkout SDK v1.2.0
+ * ZeroPaye Checkout SDK v3.0.0
  * https://github.com/DKUMARGUPTA/ZeroPaye
  *
  * Zero • Empowering • Reliable • Open • Payé
@@ -132,8 +132,11 @@
 
   function closeModal(result) {
     if (!currentModal) return;
+    // v3.0 fix: save refs before nulling (was: onClose/handler never fired)
     var overlay = currentModal.overlay;
     var iframe = currentModal.iframe;
+    var savedOnClose = currentModal.onClose;
+    var savedHandler = currentModal.handler;
     if (iframe && iframe.contentWindow) {
       try {
         iframe.contentWindow.postMessage({ event: "zeropaye.request_cancel" }, "*");
@@ -144,8 +147,8 @@
     }
     currentModal = null;
     document.body.style.overflow = "";
-    if (currentModal && currentModal.onClose) currentModal.onClose();
-    if (result && currentModal && currentModal.handler) currentModal.handler(result);
+    if (savedOnClose) savedOnClose();
+    if (result && savedHandler) savedHandler(result);
   }
 
   function openModal(opts) {
@@ -268,7 +271,8 @@
   window.addEventListener("message", function (e) {
     if (!e.data || typeof e.data !== "object") return;
     if (!e.data.event || e.data.event.indexOf("zeropaye:") !== 0) return;
-    // NOTE: For production, validate e.origin against API_BASE.
+    // v3.0 C7 fix: validate e.origin against API_BASE (was "*", anyone could fake success)
+    if (e.origin !== API_BASE && e.origin !== new URL(API_BASE).origin) return;
     var ev = e.data.event;
     var detail = e.data.detail || {};
     if (!currentModal) return;
@@ -293,7 +297,7 @@
   // --- Public API ---
   window.ZeroPaye = {
     _loaded: true,
-    version: "1.2.0",
+    version: "3.0.0",
     API_BASE: API_BASE,
     DEFAULT_CURRENCY: DEFAULT_CURRENCY,
 
@@ -385,5 +389,5 @@
   // Re-bind periodically for SPAs that inject buttons dynamically
   setInterval(bindDeclarativeButtons, 2000);
 
-  console.log("[ZeroPaye] SDK v1.2.0 loaded. API_BASE:", API_BASE);
+  console.log("[ZeroPaye] SDK v3.0.0 loaded. API_BASE:", API_BASE);
 })();

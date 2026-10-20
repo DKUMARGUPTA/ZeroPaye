@@ -55,6 +55,12 @@ export function verifyOtp(mobile: string, otp: string): { ok: true } | { ok: fal
   if (rec.lockedUntil > now) {
     return { ok: false, reason: "Too many wrong attempts. Account locked.", lockoutMs: rec.lockedUntil - now };
   }
+  // v3.0 POC4 fix: if lockout has EXPIRED, reset attempts to 0
+  // (was: lockout expires but attempts still at 5 → first typo = another 15-min lock)
+  if (rec.lockedUntil > 0 && rec.lockedUntil <= now) {
+    rec.attempts = 0;
+    rec.lockedUntil = 0;
+  }
   if (rec.expiresAt < now) {
     OTPS.delete(mobile);
     return { ok: false, reason: "OTP expired. Please request a new code." };

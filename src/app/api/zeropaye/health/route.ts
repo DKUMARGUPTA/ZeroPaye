@@ -20,7 +20,7 @@ export async function GET() {
     return jsonOk({
       status: "ok",
       service: "zeropaye",
-      version: "1.1.0",
+      version: "3.0.0",
       uptimeMs,
       uptimeHuman: `${Math.floor(uptimeMs / 1000)}s`,
       timestamp: new Date().toISOString(),
