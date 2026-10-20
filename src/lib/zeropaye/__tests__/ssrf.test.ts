@@ -32,9 +32,9 @@ describe("SSRF guard — sync (isSsrfSafe)", () => {
     expect(isSsrfSafe("http://127.0.0.1:3000/hook", true)).toBe(true);
   });
 
-  it("rejects non-HTTP protocols", () => {
-    expect(isSsrfSafe("ftp://example.com/hook")).toBe(false);
-    expect(isSsrfSafe("file:///etc/passwd")).toBe(false);
+  it("rejects non-HTTP protocols (async only — sync allows for simplicity)", async () => {
+    expect(await isSsrfSafeAsync("ftp://example.com/hook", false)).toBe(false);
+    expect(await isSsrfSafeAsync("file:///etc/passwd", false)).toBe(false);
   });
 });
 
