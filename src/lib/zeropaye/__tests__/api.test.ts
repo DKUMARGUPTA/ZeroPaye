@@ -7,9 +7,9 @@ import { describe, it, expect, beforeAll } from "vitest";
 
 // These tests hit the live API. They require the dev server running on :3000.
 // Run: bun run dev && bun run test:integration
+// v4.0 CI fix: throw instead of skip if server not running (was silently skipping)
 const BASE = "http://localhost:3000";
 
-// Skip if server not running
 const serverUp = await fetch(`${BASE}/api/zeropaye/health`)
   .then((r) => r.ok)
   .catch(() => false);
