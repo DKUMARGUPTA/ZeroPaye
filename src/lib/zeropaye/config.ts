@@ -76,10 +76,16 @@ export async function ensureDemoMerchant() {
 }
 
 /**
- * Read the demo observer signing key from the sidecar file (persists across restarts).
- * Audit NEW-09: previously stored in process.env which is lost on restart.
+ * Read the demo observer signing key.
+ * v3.3: Priority: DEMO_DEVICE_SIGNING_KEY env var > sidecar file > null
+ * On Vercel (serverless), env var is the only option (no filesystem).
  */
 export async function getDemoObserverKey(): Promise<string | null> {
+  // v3.3: env var takes priority (works on Vercel/serverless)
+  if (process.env.DEMO_DEVICE_SIGNING_KEY) {
+    return process.env.DEMO_DEVICE_SIGNING_KEY;
+  }
+  // Fallback: sidecar file (local dev only)
   try {
     const fs = await import("node:fs");
     const path = await import("node:path");
@@ -88,7 +94,7 @@ export async function getDemoObserverKey(): Promise<string | null> {
       return fs.readFileSync(keyFile, "utf8").trim();
     }
   } catch {
-    /* ignore */
+    /* ignore — serverless environment */
   }
   return null;
 }

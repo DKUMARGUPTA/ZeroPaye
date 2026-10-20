@@ -8,7 +8,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // v3.3: PostgreSQL for Vercel (Prisma Postgres)
+  // For local dev with SQLite: change to `provider = "postgresql"` and set
+  // DATABASE_URL="file:../db/custom.db"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
