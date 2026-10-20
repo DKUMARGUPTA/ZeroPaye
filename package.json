@@ -61,6 +61,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.2",
+    "googleapis": "^186.0.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.525.0",
     "next": "^16.1.1",
@@ -68,6 +69,7 @@
     "next-intl": "^4.3.4",
     "next-themes": "^0.4.6",
     "prisma": "^6.11.1",
+    "puppeteer": "^25.14.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-day-picker": "^9.8.0",
@@ -100,7 +102,7 @@
     "typescript": "^5",
     "vitest": "^5.0.5"
   },
-  "description": "ZeroPaye \u2014 Zero \u2022 Empowering \u2022 Reliable \u2022 Open \u2022 Pay\u00e9. 100% open-source (AGPL-3.0) zero-fee UPI payment gateway for India.",
+  "description": "ZeroPaye — Zero • Empowering • Reliable • Open • Payé. 100% open-source (AGPL-3.0) zero-fee UPI payment gateway for India.",
   "license": "AGPL-3.0-or-later",
   "author": "ZeroPaye Project",
   "keywords": [
