@@ -50,16 +50,16 @@ describe("money — toRupeesString", () => {
 
 describe("money — formatINR", () => {
   it("formats with Indian grouping", () => {
-    expect(formatINR(49900)).toBe("Rs 499.00");
-    expect(formatINR(100000)).toBe("Rs 1,000.00");
-    expect(formatINR(10000000)).toBe("Rs 1,00,000.00");
+    expect(formatINR(49900)).toBe("₹499.00");
+    expect(formatINR(100000)).toBe("₹1,000.00");
+    expect(formatINR(10000000)).toBe("₹1,00,000.00");
   });
 });
 
 describe("money — formatINRCompact", () => {
   it("formats large amounts compactly", () => {
-    expect(formatINRCompact(50000000)).toBe("Rs 5.00L");
-    expect(formatINRCompact(10000000)).toBe("Rs 1.00L");
-    expect(formatINRCompact(100000)).toBe("Rs 1.0K");
+    expect(formatINRCompact(50000000)).toBe("₹5.00L");
+    expect(formatINRCompact(10000000)).toBe("₹1.00L");
+    expect(formatINRCompact(100000)).toBe("₹1.0K");
   });
 });
