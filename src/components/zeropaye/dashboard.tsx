@@ -7,7 +7,9 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import {
   Activity, Banknote, CheckCircle2, Clock, CreditCard, Loader2,
   Server, Smartphone, TrendingUp, Users, Zap, ShieldCheck, Copy, ArrowUpRight,
@@ -42,6 +44,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [adminKey, setAdminKey] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -121,17 +124,23 @@ export function Dashboard() {
   return (
     <section id="dashboard" className="scroll-mt-20 relative border-y border-border/40 bg-muted/20 py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-teal-600 dark:text-teal-300">
-            Merchant Dashboard
-          </span>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-            One panel, <span className="text-gradient">sab kuch</span>
-          </h2>
-          <p className="mt-4 text-base text-muted-foreground sm:text-lg">
-            Live transactions, VPA slot status, observer health, and white-label
-            branding — all in a self-hosted panel you control.
-          </p>
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-teal-600 dark:text-teal-300">
+              Admin Dashboard
+            </span>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+              Merchant <span className="text-gradient">Control Center</span>
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Track payments, manage VPA, monitor observers, configure settings — sab ek jagah.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="gap-1 text-xs">
+              <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Live
+            </Badge>
+          </div>
         </div>
 
         {data && (
@@ -207,14 +216,28 @@ export function Dashboard() {
                     <div className="border-b border-border/40 px-4 pt-3">
                       <TabsList className="bg-transparent h-9">
                         <TabsTrigger value="transactions" className="text-xs">Transactions</TabsTrigger>
+                        <TabsTrigger value="analytics" className="text-xs">Analytics</TabsTrigger>
                         <TabsTrigger value="vpa" className="text-xs">VPA & Queue</TabsTrigger>
                         <TabsTrigger value="observers" className="text-xs">Observers</TabsTrigger>
-                        <TabsTrigger value="branding" className="text-xs">White-Label</TabsTrigger>
+                        <TabsTrigger value="settings" className="text-xs">Settings</TabsTrigger>
+                        <TabsTrigger value="branding" className="text-xs">Branding</TabsTrigger>
                       </TabsList>
                     </div>
 
                     {/* Transactions tab */}
                     <TabsContent value="transactions" className="m-0 p-4">
+                      {/* Search bar */}
+                      <div className="mb-3 flex items-center gap-2">
+                        <Input
+                          placeholder="Search by order ID, UTR, or customer…"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="h-8 text-sm max-w-xs"
+                        />
+                        <span className="text-[10px] text-muted-foreground">
+                          {data.sessions.length} total
+                        </span>
+                      </div>
                       <div className="overflow-hidden rounded-xl border border-border/40">
                         <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-2 border-b bg-muted/40 px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                           <span>Order</span><span>Amount</span><span>Status</span><span>UTR / Time</span>
@@ -225,9 +248,17 @@ export function Dashboard() {
                               No transactions yet. Run the live demo above to populate this.
                             </div>
                           ) : (
-                            data.sessions.map((s: any) => (
+                            data.sessions
+                              .filter((s: any) => !searchQuery ||
+                                s.orderId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                s.utr?.includes(searchQuery) ||
+                                s.customerName?.toLowerCase().includes(searchQuery.toLowerCase()))
+                              .map((s: any) => (
                               <div key={s.id} className="grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-2 border-b border-border/20 px-3 py-2.5 text-xs last:border-0 hover:bg-accent/40 transition-colors">
-                                <span className="truncate font-mono text-[11px]">{s.orderId}</span>
+                                <div className="min-w-0">
+                                  <span className="truncate block font-mono text-[11px]">{s.orderId}</span>
+                                  {s.customerName && <span className="text-[9px] text-muted-foreground truncate block">{s.customerName}</span>}
+                                </div>
                                 <span className="font-medium">{formatINR(s.amountPaise)}</span>
                                 <Badge variant="outline" className={`h-5 w-fit px-1.5 text-[10px] ${STATUS_COLOR[s.status] || ""}`}>{s.status}</Badge>
                                 <span className="font-mono text-[10px] text-muted-foreground">
@@ -236,6 +267,47 @@ export function Dashboard() {
                               </div>
                             ))
                           )}
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    {/* Analytics tab */}
+                    <TabsContent value="analytics" className="m-0 p-4 space-y-4">
+                      <div>
+                        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment Status Breakdown</h4>
+                        <div className="space-y-2">
+                          {[
+                            { label: "Success", count: data.stats.success, color: "bg-emerald-500" },
+                            { label: "Active/Processing", count: data.stats.active, color: "bg-teal-500" },
+                            { label: "Queued", count: data.stats.queued, color: "bg-cyan-500" },
+                            { label: "Failed/Expired", count: data.stats.failed, color: "bg-rose-500" },
+                          ].map(s => (
+                            <div key={s.label}>
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">{s.label}</span>
+                                <span className="font-medium">{s.count}</span>
+                              </div>
+                              <Progress value={data.stats.total > 0 ? (s.count / data.stats.total) * 100 : 0} className="mt-1 h-2" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                        <div className="text-2xl font-bold text-emerald-600">{formatINR(data.stats.feesSavedPaise)}</div>
+                        <div className="text-[10px] text-muted-foreground">Total fees saved vs 2.2% aggregator</div>
+                        <div className="mt-3 space-y-1.5 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Razorpay would charge:</span>
+                            <span className="font-medium text-rose-500">{formatINR(Math.round(data.stats.totalSettledPaise * 0.022))}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">ZeroPaye charged:</span>
+                            <span className="font-bold text-emerald-600">Rs 0.00</span>
+                          </div>
+                          <div className="flex justify-between border-t border-border/30 pt-1.5">
+                            <span className="font-medium">You saved:</span>
+                            <span className="font-bold text-emerald-600">{formatINR(data.stats.feesSavedPaise)}</span>
+                          </div>
                         </div>
                       </div>
                     </TabsContent>
