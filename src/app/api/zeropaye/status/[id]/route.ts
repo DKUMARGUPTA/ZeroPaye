@@ -59,12 +59,16 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   if (session.status === "ACTIVE" && session.expiresAt && session.expiresAt.getTime() < Date.now()) {
     await expireSession(session.id, session.receivingAccountId);
   }
-  // v3.2 fix: PROCESSING window extended from 30s → 3min (180s)
-  // Indian bank SMS often arrives 1-3 min late. 30s was too aggressive.
+  // v4.0 fix: PROCESSING timeout → UNCONFIRMED (not FAILED)
+  // Customer said "I've paid" but bank credit not detected within 10 min.
+  // Merchant can manually attach observation via reconcile screen.
   if (session.status === "PROCESSING" && session.processingAt) {
     const elapsed = Date.now() - session.processingAt.getTime();
-    if (elapsed > 180000) { // 3 minutes
-      await failSession(session.id, session.receivingAccountId, "Verification timed out (3min)");
+    if (elapsed > 600000) { // 10 minutes (was 3 min, now 10 min for Indian bank SMS)
+      await db.paymentSession.update({
+        where: { id: session.id },
+        data: { status: "UNCONFIRMED" },
+      }).catch(() => {});
     }
   }
 

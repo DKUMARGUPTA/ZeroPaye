@@ -197,8 +197,8 @@ async function sweepStaleSessions() {
           // v3.2 fix: use expiresAt (set at activation) + processingAt (3min window)
           // Removed createdAt < now-10min (was causing premature expiry of queued-then-promoted sessions)
           OR: [
-            { expiresAt: { lt: now } },                              // ACTIVE past 5-min window
-            { processingAt: { lt: new Date(now.getTime() - 180_000) } }, // PROCESSING past 3-min window
+            { expiresAt: { lt: now } },                                  // ACTIVE past 5-min window
+            { processingAt: { lt: new Date(now.getTime() - 600000) } },  // v4.0: PROCESSING past 10-min → UNCONFIRMED (not FAILED)
           ],
         },
         orderBy: { activatedAt: "asc" },
@@ -206,9 +206,11 @@ async function sweepStaleSessions() {
       if (!stale) continue;
 
       await db.$transaction(async (tx) => {
+        // v4.0: PROCESSING sessions → UNCONFIRMED (not EXPIRED), so merchant can reconcile
+        const newStatus = stale.status === "PROCESSING" ? "UNCONFIRMED" : "EXPIRED";
         await tx.paymentSession.update({
           where: { id: stale.id },
-          data: { status: "EXPIRED" },
+          data: { status: newStatus },
         });
         await tx.receivingAccount.update({
           where: { id: account.id },

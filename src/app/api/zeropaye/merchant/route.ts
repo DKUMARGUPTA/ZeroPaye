@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
         id: m.id,
         businessName: m.businessName,
         publicApiKey: m.publicApiKey,
-        adminApiKey: m.adminApiKey,
+        // v4.0 H4 fix: NEVER return adminApiKey in GET response
+        adminApiKey: null,
         branding,
         defaultVpa: m.defaultVpa,
       },
@@ -67,7 +68,8 @@ export async function GET(req: NextRequest) {
       id: merchant.id,
       businessName: merchant.businessName,
       publicApiKey: merchant.publicApiKey,
-      adminApiKey: merchant.adminApiKey,
+      // v4.0 H4 fix: NEVER return adminApiKey in GET response
+      adminApiKey: null,
       branding,
       defaultVpa: merchant.defaultVpa,
     },

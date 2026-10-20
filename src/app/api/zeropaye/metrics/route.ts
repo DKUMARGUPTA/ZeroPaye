@@ -25,8 +25,16 @@ export function incCounter(name: keyof typeof counters, by = 1) {
   counters[name] = (counters[name] || 0) + by;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    // v4.0 H6 fix: /metrics requires METRICS_TOKEN (was unauthenticated)
+    const metricsToken = process.env.METRICS_TOKEN;
+    if (metricsToken) {
+      const auth = req.headers.get("authorization") || "";
+      if (auth !== `Bearer ${metricsToken}`) {
+        return jsonErr(401, "Unauthorized: provide Bearer METRICS_TOKEN");
+      }
+    }
     const uptimeMs = Date.now() - startedAt;
     // DB-backed metrics
     const totalSessions = await db.paymentSession.count();

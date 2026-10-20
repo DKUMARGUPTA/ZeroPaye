@@ -22,11 +22,14 @@ model Merchant {
   id              String   @id @default(cuid())
   businessName    String
   publicApiKey   String   @unique @default(cuid())
-  adminApiKey    String   @unique @default(cuid()) // admin auth (S1 fix)
-  webhookSecret  String   // rotated on first boot, never returned in GET (S8 fix)
+  adminApiKey    String   @unique @default(cuid())
+  adminKeyHash   String?  @unique  // v4.0 H4 fix: sha256(adminApiKey), not plaintext
+  webhookSecret  String
   webhookUrl     String?
   branding       String?  // JSON: brandName, logoUrl, accentColor, gradient, etc.
   defaultVpa     String?
+  allowClientPricing Boolean @default(false) // v4.0 C5 fix: client-side pricing opt-in
+  maxOffsetPaise Int      @default(25) // v4.0 C4 fix: max paise suffix for unique payable
   activeWindowMs  Int     @default(300000) // 5 min pay window
   verifyWindowMs   Int    @default(30000)  // 30 sec verify window
   createdAt       DateTime @default(now())

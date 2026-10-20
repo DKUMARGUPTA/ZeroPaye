@@ -25,15 +25,19 @@ if (!existsSync(BACKUP_DIR)) {
 }
 
 try {
-  // Also copy WAL + SHM if they exist (SQLite WAL mode)
-  copyFileSync(DB_PATH, backupPath);
-  for (const ext of ["-wal", "-shm", "-journal"]) {
-    const src = DB_PATH + ext;
-    if (existsSync(src)) {
-      copyFileSync(src, backupPath + ext);
-    }
+  // v4.0 H6 fix: VACUUM INTO creates a consistent snapshot (was copyFileSync —
+  // could be inconsistent if DB was being written to during copy)
+  // Note: VACUUM INTO requires SQLite 3.27+ (bundled in Node 20+)
+  // For PostgreSQL, use pg_dump instead
+  const { PrismaClient } = await import("@prisma/client");
+  const db = new PrismaClient();
+  try {
+    // VACUUM INTO for SQLite — produces a clean, consistent backup
+    await db.$executeRawUnsafe(`VACUUM INTO '${backupPath.replace(/'/g, "''")}'`);
+    console.log(`[ZeroPaye backup] ✓ VACUUM INTO ${backupPath}`);
+  } finally {
+    await db.$disconnect();
   }
-  console.log(`[ZeroPaye backup] ✓ Created ${backupPath}`);
   // Optionally: clean up backups older than 30 days
   // (implement with fs.readdir + stat + unlink if needed)
 } catch (e) {

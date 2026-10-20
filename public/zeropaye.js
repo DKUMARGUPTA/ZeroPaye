@@ -110,7 +110,7 @@
     "  animation: zp-spin 0.8s linear infinite; margin-right: 12px;",
     "}",
     "@keyframes zp-fade-in { from { opacity: 0 } to { opacity: 1 } }",
-    "@keytures zp-slide-up { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }",
+    "@keyframes zp-slide-up { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }",
     "@keyframes zp-slide-up { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }",
     "@keyframes zp-spin { to { transform: rotate(360deg) } }",
     "@media (max-width: 640px) {",
@@ -386,8 +386,33 @@
     bindDeclarativeButtons();
   }
 
-  // Re-bind periodically for SPAs that inject buttons dynamically
-  setInterval(bindDeclarativeButtons, 2000);
+  // v4.0 fix: event delegation instead of polling (was setInterval every 2s)
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest && e.target.closest('[data-zeropaye-pay]');
+    if (!btn || btn._zeropayeBound) return;
+    btn._zeropayeBound = true;
+    e.preventDefault();
+    var opts = {
+      order_id: btn.getAttribute('data-order-id'),
+      amount: btn.getAttribute('data-amount'),
+      currency: btn.getAttribute('data-currency') || DEFAULT_CURRENCY,
+      name: btn.getAttribute('data-name') || '',
+      description: btn.getAttribute('data-description') || '',
+      customerName: btn.getAttribute('data-customer-name') || '',
+      key: btn.getAttribute('data-zeropaye-key') || DEFAULT_PUBLIC_KEY,
+      handler: function (res) {
+        try { window.dispatchEvent(new CustomEvent('zeropaye:payment:success', { detail: res })); } catch (e) {}
+        var successUrl = btn.getAttribute('data-success-url');
+        if (successUrl && res.status === 'SUCCESS') {
+          window.location.href = successUrl.replace('{order_id}', encodeURIComponent(res.order_id || '')).replace('{utr}', encodeURIComponent(res.utr || '')).replace('{amount}', encodeURIComponent(res.amount_received || ''));
+        }
+      },
+      onClose: function () {
+        try { window.dispatchEvent(new CustomEvent('zeropaye:payment:cancelled')); } catch (e) {}
+      },
+    };
+    window.ZeroPaye.pay(opts);
+  });
 
   console.log("[ZeroPaye] SDK v3.0.0 loaded. API_BASE:", API_BASE);
 })();

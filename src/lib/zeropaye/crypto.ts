@@ -3,7 +3,7 @@
 // S16 (non-constant-time compare), S27 (low PBKDF2), S9 (plaintext key store),
 // S2 (optional HMAC), S22/S30 (predictable random).
 
-import { createHmac, createHash, randomInt, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, createHash, randomInt, randomBytes, timingSafeEqual, randomUUID } from "node:crypto";
 
 /**
  * Cryptographically secure 6-digit OTP. Uses node:crypto.randomInt, NOT Math.random.
@@ -77,7 +77,8 @@ export function generatePairingToken(): string {
  * Generate a UUID v4 (for webhook delivery ids — idempotency).
  */
 export function uuid(): string {
-  return randomBytes(16).toString("hex").replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5");
+  // v4.0 fix: use node:crypto.randomUUID (proper UUID v4 with version + variant bits)
+  return randomUUID();
 }
 
 /**
