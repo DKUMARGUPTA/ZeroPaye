@@ -94,15 +94,18 @@ export async function POST(req: NextRequest) {
     }
 
     // v3.0 C5 fix: orderId collision with DIFFERENT amount → 409 (not return old session)
-    // Prevents attacker from pre-creating ₹1 session with same orderId
+    // Prevents attacker from pre-creating ₹1 session with same orderId.
+    // v3.2 fix: allow tolerance of 99 paise (unique-paise suffix range) for same orderId.
     const existing = await db.paymentSession.findFirst({
       where: { merchantId: realMerchantId, orderId, status: { in: ["INITIATED", "AUTH_PENDING", "AUTHENTICATED", "QUEUED", "ACTIVE", "PROCESSING"] } },
       orderBy: { createdAt: "desc" },
     });
     if (existing) {
-      if (existing.amountPaise !== amountPaise) {
+      const amountDiff = Math.abs(existing.amountPaise - amountPaise);
+      if (amountDiff > 99) {
         return jsonErr(409, `orderId "${orderId}" already exists with a different amount (₹${(existing.amountPaise / 100).toFixed(2)}). Use a unique orderId.`);
       }
+      // Same amount (within suffix tolerance) → return existing (idempotent)
       return jsonOk({ session: serialize(existing), merchant: { publicApiKey: merchant.publicApiKey, businessName: merchant.businessName } });
     }
 

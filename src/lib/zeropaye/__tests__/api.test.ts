@@ -54,7 +54,9 @@ describe.skipIf(!serverUp)("API integration — /session creation", () => {
     const data = await res.json();
     expect(data.session).toBeTruthy();
     expect(data.session.orderId).toBe(orderId);
-    expect(data.session.amountPaise).toBe(10000);
+    // v3.2: amountPaise includes 1-99 paise suffix (₹100.00 → ₹100.xx)
+    expect(data.session.amountPaise).toBeGreaterThanOrEqual(10001);
+    expect(data.session.amountPaise).toBeLessThanOrEqual(10099);
     expect(data.session.status).toBe("INITIATED");
     expect(data.merchant.publicApiKey).toMatch(/^zp_/);
   });
