@@ -54,3 +54,12 @@ worklog.md
 # Backups
 /backups/
 Caddyfile
+
+# Sandbox artifacts — not part of ZeroPaye
+/examples/
+/tool-results/
+/.zscripts/
+/tests/
+/skills/
+/download/
+/mini-services/
