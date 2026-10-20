@@ -24,6 +24,11 @@ const ALLOWED_BRANDING_KEYS = [
 export async function PATCH(req: NextRequest) {
   const requestId = await getRequestId();
   try {
+    // v3.3: LOCK demo account — if DEMO_ADMIN_KEY is set, reject all changes
+    if (process.env.DEMO_ADMIN_KEY) {
+      return jsonErr(403, "Demo account is LOCKED. Changes are not allowed in demo mode.");
+    }
+
     const admin = await requireAdmin(req);
     if (!admin.ok) return admin.response;
     const { merchant } = admin;
