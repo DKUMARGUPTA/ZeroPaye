@@ -37,6 +37,7 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: "bg-muted text-muted-foreground border-border",
   INITIATED: "bg-muted text-muted-foreground border-border",
   AUTH_PENDING: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30",
+  UNCONFIRMED: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
 };
 
 export function Dashboard() {
@@ -220,6 +221,9 @@ export function Dashboard() {
                         <TabsTrigger value="vpa" className="text-xs">VPA & Queue</TabsTrigger>
                         <TabsTrigger value="observers" className="text-xs">Observers</TabsTrigger>
                         <TabsTrigger value="settings" className="text-xs">Settings</TabsTrigger>
+                        <TabsTrigger value="reconcile" className="text-xs gap-1.5">
+                          Reconcile
+                        </TabsTrigger>
                         <TabsTrigger value="branding" className="text-xs">Branding</TabsTrigger>
                       </TabsList>
                     </div>
@@ -388,6 +392,11 @@ export function Dashboard() {
                       </div>
                     </TabsContent>
 
+                    {/* Reconcile tab — unmatched observations + manual attach */}
+                    <TabsContent value="reconcile" className="m-0 p-4">
+                      <ReconcileTab adminKey={adminKey} />
+                    </TabsContent>
+
                     {/* Branding tab */}
                     <TabsContent value="branding" className="m-0 p-4">
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -468,6 +477,159 @@ function BrandingField({ label, value, colorSwatch, mono }: { label: string; val
         {colorSwatch && <span className="h-5 w-5 rounded-md shrink-0" style={{ background: colorSwatch }} />}
         <span className={mono ? "font-mono text-xs" : ""}>{value}</span>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Reconcile Tab — unmatched bank credits + manual attach to sessions
+// ---------------------------------------------------------------------------
+function ReconcileTab({ adminKey }: { adminKey: string | null }) {
+  const [observations, setObservations] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [attaching, setAttaching] = useState<string | null>(null);
+  const [attachResult, setAttachResult] = useState<string | null>(null);
+
+  const loadData = async () => {
+    if (!adminKey) return;
+    try {
+      const headers = { "x-zeropaye-admin-key": adminKey };
+      const [obsRes, sessRes] = await Promise.all([
+        fetch("/api/zeropaye/admin/observations", { headers }),
+        fetch("/api/zeropaye/session", { headers }),
+      ]);
+      const obsData = await obsRes.json();
+      const sessData = await sessRes.json();
+      setObservations(obsData.observations || []);
+      // Filter sessions that can be reconciled (EXPIRED/UNCONFIRMED)
+      setSessions((sessData.sessions || []).filter((s: any) => ["EXPIRED", "UNCONFIRMED"].includes(s.status)));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadData(); }, [adminKey]);
+
+  const attach = async (observationId: string, sessionId: string) => {
+    setAttaching(observationId);
+    setAttachResult(null);
+    try {
+      const res = await fetch("/api/zeropaye/admin/observations", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-zeropaye-admin-key": adminKey! },
+        body: JSON.stringify({ observationId, sessionId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAttachResult(`✅ Attached to session ${sessionId.slice(0, 12)}... UTR: ${data.utr}`);
+        loadData(); // refresh
+      } else {
+        setAttachResult(`❌ ${data.error}`);
+      }
+    } catch (e: any) {
+      setAttachResult(`❌ ${e.message}`);
+    } finally {
+      setAttaching(null);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-teal-600" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Info banner */}
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <div>
+            <p className="text-xs font-medium text-foreground">Unmatched Bank Credits</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+              Yeh woh bank credits hain jahan SMS/email aayi par koi ACTIVE session nahi mila
+              (late SMS, wrong amount, ya session expire ho gaya). Manually correct session
+              se attach karke payment confirm karein.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Attach result */}
+      {attachResult && (
+        <div className={`rounded-lg p-3 text-xs ${attachResult.startsWith("✅") ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-rose-500/10 text-rose-700 dark:text-rose-300"}`}>
+          {attachResult}
+        </div>
+      )}
+
+      {/* Unmatched observations */}
+      {observations.length === 0 ? (
+        <div className="rounded-xl border border-border/40 py-8 text-center">
+          <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500/60" />
+          <p className="mt-2 text-sm font-medium">Sab credits matched!</p>
+          <p className="text-[10px] text-muted-foreground">Koi unmatched observation nahi hai.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {observations.map((obs: any) => (
+            <div key={obs.id} className="rounded-xl border border-border/40 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[9px]">{obs.source}</Badge>
+                    <span className="font-mono text-xs font-bold">{obs.parsedUtr}</span>
+                    <span className="text-sm font-bold text-gradient">
+                      Rs {(obs.parsedAmountPaise / 100).toFixed(2)}
+                    </span>
+                  </div>
+                  {obs.rawText && (
+                    <p className="mt-1 truncate text-[10px] text-muted-foreground">{obs.rawText.slice(0, 100)}</p>
+                  )}
+                  <p className="mt-0.5 text-[9px] text-muted-foreground">
+                    {new Date(obs.createdAt).toLocaleString("en-IN")}
+                  </p>
+                </div>
+              </div>
+              {/* Attach to session */}
+              <div className="mt-2 flex items-center gap-2">
+                <select
+                  className="flex-1 rounded-md border border-border/40 bg-background px-2 py-1 text-xs"
+                  onChange={(e) => e.target.value && attach(obs.id, e.target.value)}
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select a session to attach…</option>
+                  {sessions.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      {s.orderId} — Rs {(s.amountPaise / 100).toFixed(2)} — {s.status}
+                    </option>
+                  ))}
+                </select>
+                {attaching === obs.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-teal-600" />}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Reconcilable sessions */}
+      {sessions.length > 0 && (
+        <div>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Sessions needing reconciliation ({sessions.length})
+          </h4>
+          <div className="space-y-1.5">
+            {sessions.map((s: any) => (
+              <div key={s.id} className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs">
+                <span className="font-mono">{s.orderId}</span>
+                <span className="font-medium">Rs {(s.amountPaise / 100).toFixed(2)}</span>
+                <Badge variant="outline" className={STATUS_COLOR[s.status] || ""}>{s.status}</Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
