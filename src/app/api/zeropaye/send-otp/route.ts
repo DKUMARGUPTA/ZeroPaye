@@ -1,13 +1,20 @@
-// ZeroPaye API — Send OTP to a customer's mobile (DEMO mode: returns OTP in dev)
+// ZeroPaye API — Send OTP to a customer's mobile
 // POST /api/zeropaye/send-otp
 // Body: { mobile, sessionId? }
-// Fixes from audit: S3 (Math.random OTP), S4 (OTP in logs), S5 (no rate limit).
-// In this demo, the OTP is shown in a toast (since we have no SMS/WhatsApp).
-// Production: integrate an SMS gateway or WhatsApp Business API.
+//
+// v3.2 C2 fix: Pluggable OTP delivery via OTP_PROVIDER env var.
+//   - console (default, dev): logs OTP to console
+//   - whatsapp: WhatsApp Business API (WHATSAPP_TOKEN, WHATSAPP_PHONE_ID)
+//   - sms: SMS gateway (SMS_API_KEY, SMS_API_URL)
+//   - email: SMTP (requires customer email)
+//
+// In dev mode (NODE_ENV != production), OTP is also returned in response (demoOtp).
+// In production, OTP is delivered via the configured provider only.
 
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { issueOtp } from "@/lib/zeropaye/otp-store";
+import { deliverOtp } from "@/lib/zeropaye/otp-provider";
 import { normalizeIndianMobile, isValidIndianMobileStrict } from "@/lib/zeropaye/validation";
 import { jsonOk, jsonErr, rateLimit, getClientIp } from "@/lib/zeropaye/security";
 
@@ -17,7 +24,6 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    // Phase 2: normalize mobile (strip +91 / leading 0) and validate strictly (audit NEW-24)
     const rawMobile = String(body?.mobile || "");
     const mobile = normalizeIndianMobile(rawMobile);
 
@@ -55,11 +61,19 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // v3.2 C2 fix: Deliver OTP via configured provider
+    const delivery = await deliverOtp(mobile, result.otp, customer.name || undefined);
+
+    const isDev = process.env.NODE_ENV !== "production";
+
     return jsonOk({
-      sent: true,
+      sent: delivery.delivered,
       mobile,
-      ...(process.env.NODE_ENV !== "production" ? { demoOtp: result.otp } : {}),
-      message: "OTP sent via WhatsApp (demo: shown above the input field)",
+      provider: delivery.provider,
+      ...(isDev ? { demoOtp: result.otp } : {}), // dev mode: show OTP for testing
+      message: delivery.delivered
+        ? `OTP sent via ${delivery.provider}`
+        : `OTP delivery failed: ${delivery.message}. ${isDev ? "Demo OTP shown above." : "Contact support."}`,
     });
   } catch (e) {
     console.error("[ZeroPaye] send-otp error", e);

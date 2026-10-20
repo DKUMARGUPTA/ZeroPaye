@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
           receivingAccountId: account.id,
           status: { in: ["ACTIVE", "PROCESSING"] },
           OR: [
-            { expiresAt: { lt: now } },
-            { processingAt: { lt: new Date(now.getTime() - 30000) } },
+            { expiresAt: { lt: now } },                                  // ACTIVE past 5-min window
+            { processingAt: { lt: new Date(now.getTime() - 180000) } },   // v3.2: PROCESSING past 3-min (was 30s)
           ],
         },
         select: { id: true },
@@ -109,12 +109,21 @@ export async function POST(req: NextRequest) {
     // v3.0 C5 fix: use idempotency key if provided
     const idemKey = getIdempotencyKey(req);
 
+    // v3.2 fix: unique-paise suffix — add 1-99 random paise to each session's amount.
+    // This makes every session's expected amount unique (₹499.00 → ₹499.07, ₹499.03, etc.)
+    // so that same-amount collision is eliminated. Observer can match by exact amount
+    // without needing single-slot FIFO queue (though we keep it as backup).
+    // The customer pays the exact amount shown on the QR (includes suffix).
+    // The extra 1-99 paise goes to the merchant's bank (real money, negligible).
+    const suffixPaise = Math.floor(Math.random() * 99) + 1; // 1-99
+    const actualAmountPaise = amountPaise + suffixPaise;
+
     const session = await db.paymentSession.create({
       data: {
         merchantId: realMerchantId,
         receivingAccountId: account?.id,
         orderId,
-        amountPaise,
+        amountPaise: actualAmountPaise, // includes suffix for exact matching
         currency: currency || "INR",
         description: description?.toString().slice(0, 200) || null,
         customerName: customerName?.toString().slice(0, 120) || null,

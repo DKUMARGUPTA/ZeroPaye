@@ -87,8 +87,25 @@ async function retryPendingWebhooks() {
           continue;
         }
 
-        const signature = `sha256=${hmacSha256(merchant.webhookSecret, delivery.payload)}`;
+        // v3.2 fix: include timestamp in signature (t.payload Stripe-style)
+        // This prevents replay attacks — a captured payload can't be reused
+        // because the timestamp in the signature won't match.
+        const webhookTimestamp = Date.now();
+        const signedPayload = `${webhookTimestamp}.${delivery.payload}`;
+        const signature = `sha256=${hmacSha256(merchant.webhookSecret, signedPayload)}`;
         const deliveryId = delivery.deliveryId;
+
+        // v3.2: use async SSRF guard (DNS resolution)
+        const { isSsrfSafeAsync } = await import("./security");
+        const ssrfOk = await isSsrfSafeAsync(merchant.webhookUrl, true);
+        if (!ssrfOk) {
+          await db.webhookDelivery.update({
+            where: { id: delivery.id },
+            data: { status: "FAILED", responseError: "SSRF blocked (DNS-resolved)" },
+          });
+          continue;
+        }
+
         const res = await fetch(merchant.webhookUrl, {
           method: "POST",
           headers: {
@@ -96,9 +113,10 @@ async function retryPendingWebhooks() {
             "x-zeropaye-signature": signature,
             "x-zeropaye-event": delivery.eventType,
             "x-zeropaye-delivery-id": deliveryId,
-            "x-zeropaye-timestamp": String(Date.now()),
+            "x-zeropaye-timestamp": String(webhookTimestamp), // v3.2: matches signature
           },
           body: delivery.payload,
+          redirect: "manual", // v3.2: don't follow redirects (SSRF protection)
           signal: AbortSignal.timeout(10000),
         });
 
@@ -176,10 +194,11 @@ async function sweepStaleSessions() {
         where: {
           receivingAccountId: account.id,
           status: { in: ["ACTIVE", "PROCESSING"] },
+          // v3.2 fix: use expiresAt (set at activation) + processingAt (3min window)
+          // Removed createdAt < now-10min (was causing premature expiry of queued-then-promoted sessions)
           OR: [
-            { expiresAt: { lt: now } },
-            { processingAt: { lt: new Date(now.getTime() - 30_000) } },
-            { createdAt: { lt: new Date(now.getTime() - 10 * 60_000) } },
+            { expiresAt: { lt: now } },                              // ACTIVE past 5-min window
+            { processingAt: { lt: new Date(now.getTime() - 180_000) } }, // PROCESSING past 3-min window
           ],
         },
         orderBy: { activatedAt: "asc" },
