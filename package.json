@@ -17,7 +17,8 @@
     "backup": "bun run scripts/backup-db.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:deploy": "prisma migrate deploy",
-    "setup": "bun run scripts/setup.ts"
+    "setup": "bun run scripts/setup.ts",
+    "doctor": "bun run scripts/doctor.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

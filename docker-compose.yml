@@ -1,0 +1,43 @@
+# ZeroPaye — Docker Compose
+# One command to run ZeroPaye + PostgreSQL
+
+version: "3.9"
+
+services:
+  zeropaye:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://zeropaye:zeropaye@db:5432/zeropaye
+      # Set these for production:
+      # - DEMO_ADMIN_KEY=  (leave empty for real merchant onboarding via `bun run setup`)
+      # - METRICS_TOKEN=    (secure /metrics endpoint)
+      # - OTP_PROVIDER=console  (or whatsapp/sms for production)
+      # - WHATSAPP_TOKEN=  (if OTP_PROVIDER=whatsapp)
+      # - WHATSAPP_PHONE_ID=
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=zeropaye
+      - POSTGRES_PASSWORD=zeropaye
+      - POSTGRES_DB=zeropaye
+    volumes:
+      - zeropaye-db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zeropaye"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  zeropaye-db:

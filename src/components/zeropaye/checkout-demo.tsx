@@ -524,10 +524,24 @@ function QrView({ session, step, payRemaining, verifyRemaining, onMarkPaid, onSi
             <img src={`/api/zeropaye/qr/${session?.id}`} alt="UPI QR" className="mx-auto h-36 w-36" />
             <p className="mt-1.5 text-[10px] text-muted-foreground">Scan with any UPI app</p>
           </div>
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {UPI_APPS.slice(0, 4).map((a) => (
-              <span key={a.id} className="rounded-md border border-border/50 px-1.5 py-0.5 text-[9px] font-medium">{a.name}</span>
-            ))}
+          {/* UPI App Intent Buttons — mobile pe direct app open karein */}
+          <div>
+            <p className="mb-1.5 text-center text-[9px] font-medium text-muted-foreground">
+              Ya pay directly:
+            </p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {UPI_APPS.slice(0, 6).map((app) => (
+                <a
+                  key={app.id}
+                  href={`${app.scheme}?pa=zeropaye.demo@upi&pn=ZeroPaye%20Demo&am=${session?.amountRupees}&cu=INR&tn=ZeroPaye%20${session?.orderId}`}
+                  className="flex flex-col items-center justify-center gap-1 rounded-lg border border-border/50 bg-card px-1 py-2 transition-all hover:border-teal-500/40 hover:shadow-sm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <span className="text-[10px] font-semibold">{app.name}</span>
+                </a>
+              ))}
+            </div>
           </div>
           <div>
             <div className="flex items-center justify-between text-[10px] font-medium">
