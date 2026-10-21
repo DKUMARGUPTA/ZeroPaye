@@ -17,6 +17,7 @@ import { verifyHmac, sha256Hex, safeEqual, uuid, hmacSha256 } from "@/lib/zeropa
 import { jsonOk, jsonErr, getClientIp, getRequestId, isSsrfSafe } from "@/lib/zeropaye/security";
 import { isValidUtr } from "@/lib/zeropaye/upi";
 import { logger } from "@/lib/zeropaye/workers";
+import { incCounter } from "@/lib/zeropaye/metrics/route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -301,6 +302,8 @@ export async function POST(req: NextRequest) {
       return jsonOk({ deduplicated: true, reason: "already confirmed" });
     }
 
+    incCounter("zeropaye_payments_success_total");
+    incCounter("zeropaye_webhook_dispatched_total");
     return jsonOk(result);
   } catch (e) {
     console.error("[ZeroPaye] observer error", e);

@@ -11,6 +11,7 @@ import { jsonOk, jsonErr, getClientIp, getUserAgent, getRequestId, rateLimit } f
 import { requireAdmin } from "@/lib/zeropaye/admin-auth";
 import { isValidOrderId, isValidCurrency, getIdempotencyKey } from "@/lib/zeropaye/validation";
 import { isDemoMode, getDemoMerchantData, createDemoSession, findDemoSession, getDemoSessions, updateDemoSession } from "@/lib/zeropaye/demo-data";
+import { incCounter } from "@/lib/zeropaye/metrics/route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
 
       // Create new session (in-memory)
       const session = createDemoSession(orderId, amountPaise, description?.toString(), customerName?.toString());
+      incCounter("zeropaye_requests_total");
       return jsonOk({ session: serializeDemo(session), merchant: { publicApiKey: merchant.publicApiKey, businessName: merchant.businessName } });
     }
 

@@ -280,6 +280,50 @@ async function checkObserverHeartbeats() {
 }
 
 // ---------------------------------------------------------------------------
+// Worker 4: DPDP data retention (auto-delete old sessions + observations)
+// v4.2 F4: Customer data retention policy (default 180 days, configurable)
+// ---------------------------------------------------------------------------
+async function dpdpRetentionCleanup() {
+  try {
+    const retentionDays = parseInt(process.env.DPDP_RETENTION_DAYS || "180");
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+
+    // Delete old observations (keep UTR for audit)
+    const deletedObs = await db.observation.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+
+    // Delete old audit logs
+    const deletedLogs = await db.auditLog.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+
+    // Delete old webhook deliveries
+    const deletedWebhooks = await db.webhookDelivery.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+
+    // Anonymize old sessions (keep order ID + amount, remove customer data)
+    const anonymized = await db.paymentSession.updateMany({
+      where: { createdAt: { lt: cutoff }, customerName: { not: null } },
+      data: { customerName: null, description: "[retention-anonymized]" },
+    });
+
+    if (deletedObs.count > 0 || deletedLogs.count > 0 || deletedWebhooks.count > 0 || anonymized.count > 0) {
+      logger.info("dpdp-retention-cleanup", {
+        retentionDays,
+        deletedObs: deletedObs.count,
+        deletedLogs: deletedLogs.count,
+        deletedWebhooks: deletedWebhooks.count,
+        anonymized: anonymized.count,
+      });
+    }
+  } catch (err) {
+    logger.error("dpdp-retention-error", { err: String(err).slice(0, 200) });
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 export function startBackgroundWorkers() {
@@ -288,7 +332,8 @@ export function startBackgroundWorkers() {
   const w1 = setInterval(retryPendingWebhooks, WORKER_INTERVAL_MS);
   const w2 = setInterval(sweepStaleSessions, WORKER_INTERVAL_MS);
   const w3 = setInterval(checkObserverHeartbeats, WORKER_INTERVAL_MS * 2);
-  workers = [w1, w2, w3];
+  const w4 = setInterval(dpdpRetentionCleanup, 24 * 60 * 60 * 1000); // daily
+  workers = [w1, w2, w3, w4];
   logger.info("background-workers-started", {
     webhookRetry: `${WORKER_INTERVAL_MS}ms`,
     staleSweep: `${WORKER_INTERVAL_MS}ms`,

@@ -20,6 +20,7 @@ import { jsonOk, jsonErr, getRequestId, getClientIp, isSsrfSafe } from "@/lib/ze
 import { sha256Hex, uuid, hmacSha256 } from "@/lib/zeropaye/crypto";
 import { randomInt } from "node:crypto";
 import { requireAdmin, requireDevMode } from "@/lib/zeropaye/admin-auth";
+import { incCounter } from "@/lib/zeropaye/metrics/route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -145,6 +146,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    incCounter("zeropaye_payments_success_total");
     // Dispatch webhook (queued; retry daemon would handle failures in prod)
     await dispatchWebhook(settled);
 

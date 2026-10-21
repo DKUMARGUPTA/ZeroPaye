@@ -8,11 +8,25 @@ import { headers } from "next/headers";
 // In-memory token-bucket rate limiter (per-IP or per-key).
 // (Audit S5 — no brute-force protection on OTP endpoints)
 // ---------------------------------------------------------------------------
+// v4.2 H6 fix: Rate limiter with memory pruning (was: unbounded Map growth)
+// Old entries (idle for >1 hour) are pruned every 5 minutes.
 interface Bucket {
   tokens: number;
   lastRefill: number;
 }
 const BUCKETS = new Map<string, Bucket>();
+const PRUNE_INTERVAL_MS = 5 * 60 * 1000; // 5 min
+const MAX_BUCKET_AGE_MS = 60 * 60 * 1000; // 1 hour
+let lastPrune = Date.now();
+
+function pruneBuckets() {
+  const now = Date.now();
+  if (now - lastPrune < PRUNE_INTERVAL_MS) return;
+  lastPrune = now;
+  for (const [key, b] of BUCKETS) {
+    if (now - b.lastRefill > MAX_BUCKET_AGE_MS) BUCKETS.delete(key);
+  }
+}
 
 export interface RateLimitConfig {
   key: string;
@@ -21,6 +35,7 @@ export interface RateLimitConfig {
 }
 
 export function rateLimit(cfg: RateLimitConfig): { ok: true } | { ok: false; retryAfterMs: number } {
+  pruneBuckets(); // v4.2: prune on each call (cheap — only runs every 5 min)
   const now = Date.now();
   const b = BUCKETS.get(cfg.key) ?? { tokens: cfg.maxTokens, lastRefill: now };
   const elapsed = (now - b.lastRefill) / 1000;

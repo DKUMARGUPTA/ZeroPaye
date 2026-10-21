@@ -17,6 +17,7 @@ import { issueOtp } from "@/lib/zeropaye/otp-store";
 import { deliverOtp } from "@/lib/zeropaye/otp-provider";
 import { normalizeIndianMobile, isValidIndianMobileStrict } from "@/lib/zeropaye/validation";
 import { jsonOk, jsonErr, rateLimit, getClientIp } from "@/lib/zeropaye/security";
+import { incCounter } from "@/lib/zeropaye/metrics/route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
     }
 
     // v3.2 C2 fix: Deliver OTP via configured provider
+    incCounter("zeropaye_otp_sent_total");
     const delivery = await deliverOtp(mobile, result.otp, customer.name || undefined);
 
     const isDev = process.env.NODE_ENV !== "production";

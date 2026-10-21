@@ -22,6 +22,14 @@ interface OtpRecord {
 
 const OTPS = new Map<string, OtpRecord>();
 
+// v4.2 H6 fix: prune expired OTP records every 5 minutes (was: unbounded growth)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, r] of OTPS) {
+    if (r.expiresAt < now && r.lockedUntil < now) OTPS.delete(key);
+  }
+}, 5 * 60 * 1000).unref?.(); // .unref = don't keep process alive just for pruning
+
 const OTP_TTL_MS = 5 * 60 * 1000;       // OTP valid 5 min
 const RESEND_COOLDOWN_MS = 30 * 1000;   // 30s between resend
 const MAX_ATTEMPTS = 5;

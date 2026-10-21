@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { verifyOtp } from "@/lib/zeropaye/otp-store";
 import { jsonOk, jsonErr, rateLimit, getClientIp, getUserAgent, getRequestId } from "@/lib/zeropaye/security";
 import { normalizeIndianMobile, isValidIndianMobileStrict } from "@/lib/zeropaye/validation";
+import { incCounter } from "@/lib/zeropaye/metrics/route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -104,6 +105,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    incCounter("zeropaye_otp_verified_total");
     return jsonOk({
       verified: true,
       session: {
