@@ -306,11 +306,11 @@ export async function POST(req: NextRequest) {
     incCounter("zeropaye_payments_success_total");
     incCounter("zeropaye_webhook_dispatched_total");
     // v4.3: notify merchant (get amount from session)
-    if (result && "confirmed" in result && result.confirmed && result.sessionId) {
-      const sess = await db.paymentSession.findUnique({ where: { id: result.sessionId }, select: { orderId: true, amountPaise: true, merchantId: true } });
+    const r: any = result;
+    if (r && r.confirmed && r.sessionId) {
+      const sess = await db.paymentSession.findUnique({ where: { id: r.sessionId }, select: { orderId: true, amountPaise: true, merchantId: true } });
       if (sess && sess.orderId) {
-        const utrVal = (result as any)?.utr ? String((result as any).utr) : "";
-        notifyPaymentSuccess(sess.orderId, sess.amountPaise, utrVal, sess.merchantId).catch(() => {});
+        notifyPaymentSuccess(sess.orderId, sess.amountPaise, String(r.utr || ""), sess.merchantId).catch(() => {});
       }
     }
     return jsonOk(result);
