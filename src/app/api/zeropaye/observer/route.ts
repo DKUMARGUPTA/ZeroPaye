@@ -308,10 +308,11 @@ export async function POST(req: NextRequest) {
     // v4.3: notify merchant (get amount from session)
     const r: any = result;
     if (r && r.confirmed && r.sessionId) {
-      const sess = await db.paymentSession.findUnique({ where: { id: r.sessionId }, select: { orderId: true, amountPaise: true, merchantId: true } });
-      if (sess != null) {
-        notifyPaymentSuccess(sess!.orderId, sess!.amountPaise, String(r.utr || ""), sess!.merchantId).catch(() => {});
-      }
+      void db.paymentSession.findUnique({ where: { id: r.sessionId }, select: { orderId: true, amountPaise: true, merchantId: true } }).then((sess: any) => {
+        if (sess && sess.orderId) {
+          notifyPaymentSuccess(sess.orderId, sess.amountPaise, String(r.utr || ""), sess.merchantId).catch(() => {});
+        }
+      });
     }
     return jsonOk(result);
   } catch (e) {
