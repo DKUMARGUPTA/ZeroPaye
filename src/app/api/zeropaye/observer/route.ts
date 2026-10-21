@@ -309,7 +309,7 @@ export async function POST(req: NextRequest) {
     if (result && "confirmed" in result && result.confirmed && result.sessionId) {
       const sess = await db.paymentSession.findUnique({ where: { id: result.sessionId }, select: { orderId: true, amountPaise: true, merchantId: true } });
       if (sess && sess.orderId) {
-        const utrVal = "utr" in result ? String(result.utr || "") : "";
+        const utrVal = (result as any)?.utr ? String((result as any).utr) : "";
         notifyPaymentSuccess(sess.orderId, sess.amountPaise, utrVal, sess.merchantId).catch(() => {});
       }
     }
