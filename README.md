@@ -47,19 +47,21 @@ Yeh README sabke liye hai — chahe aap **chhote dukaandaar** ho, **freelancer**
 
 ---
 
-## 🎉 What's New (v2.3)
+## 🎉 What's New (v4.0)
 
 | Version | Release highlights |
 |---|---|
-| **v2.3** | Admin panel (self-serve VPA + branding) + PWA manifest + merchant update API |
-| **v2.2** | Hosted checkout page (`/checkout/[id]`) + 19 API integration tests (70 total) |
-| **v2.1** | 19 SEO-optimized pages + sitemap + robots.txt + JSON-LD structured data |
-| **v2.0** | Complete UI/UX redesign — glassmorphism, bento grids, dark mode glow, animations |
-| **v1.2** | `zeropaye.js` SDK + PHP/Go webhook snippets + `/metrics` endpoint + DB backup |
+| **v4.0** | Admin key hash + UNCONFIRMED state + reconcile screen + CI typecheck + 91 unit tests + migrations + setup CLI + honest README |
+| **v3.4** | Comprehensive admin dashboard (7 tabs: transactions, analytics, VPA, observers, settings, reconcile, branding) |
+| **v3.3** | Vercel deployment support (demo mode without DB + PostgreSQL + locked demo account + `/demo` page) |
+| **v3.2** | Unique-paise suffix + sweep logic fix + OTP provider (WhatsApp/SMS/email) + webhook `t.payload` signature |
+| **v3.1** | WhatsApp Web + Gmail observers + pairing/heartbeat endpoints + observer runner CLI |
+| **v3.0** | Critical money bug fixes: UTR dedup, session hardening, SSRF brackets, SDK iframe, idempotency |
+| **v2.x** | SEO pages, UI redesign, hosted checkout, SDK, CI, health/metrics endpoints |
 | **v1.1** | 51 tests + CI workflow + `/health` + background workers + security headers + DNS-based SSRF |
 | **v1.0.1** | Critical security fixes: admin auth, mandatory HMAC, race conditions, OTP crypto |
 
-**Total:** 13 API endpoints · 22 pages · 70 tests · 16+ UI components · 11 lib modules · AGPL-3.0
+**Total:** 14 API endpoints · 22 pages · 91 unit tests + 19 integration tests · 18+ UI components · 12 lib modules · AGPL-3.0
 
 <br/>
 
@@ -205,10 +207,10 @@ ZeroPaye koi "aggregator" nahi hai. Yeh ek **software** hai jo aap apne server p
 |---|---|---|
 | **Transaction Fee** | 2-3% + 18% GST har transaction par | **₹0 — 0% forever** |
 | **Settlement** | 2-3 din baad bank mein aata hai | **Turant (instant)** |
-| **Account Freeze Risk** | Bina bataye account freeze kar dete hain | **Zero** — aap apna VPA control karte ho |
+| **Account Freeze Risk** | Bina bataye account freeze kar dete hain | **Kam** — aap apna VPA control karte ho, lekin bank commercial volume par flag kar sakta hai. Current account + merchant VPA use karo. |
 | **Branding** | "Powered by Razorpay" likhna padta hai | **100% aapka brand** |
 | **Source Code** | Band, koi nahi dekh sakta | **Open-source (AGPL-3.0)** |
-| **Monthly Cost** | ₹0 ya per-transaction fee | **₹0 forever** |
+| **Monthly Cost** | ₹0 ya per-transaction fee | **Gateway fee ₹0** (WhatsApp OTP ka Meta charge alag, agar on karo) |
 
 ### Asli example (Real savings):
 > **Aap ₹5,00,000 ka mahina karte ho.**
@@ -1018,9 +1020,9 @@ INITIATED → AUTH_PENDING → AUTHENTICATED → (ACTIVE | QUEUED)
 
 ## ⚠️ Production Notes (Important — padhein!)
 
-ZeroPaye v2.3 **demo + self-host single-merchant ke liye fully production-ready hai**. Yahan ek honest summary hai:
+ZeroPaye v4.0 **demo + self-host beta ke liye ready hai**. P0 fixes ho gaye hain, lekin kuch cheezein baaki hain. Yahan ek honest summary hai:
 
-### ✅ Jo already ready hai (v2.3):
+### ✅ Jo already ready hai (v4.0):
 - ✅ **All security fixes** — admin auth, mandatory HMAC, DNS-based SSRF, race conditions, OTP crypto, rate limiting, security headers (CSP, HSTS, X-Frame-Options, etc.)
 - ✅ **Full interactive demo** — live checkout flow with WhatsApp OTP, vector QR, dual timers
 - ✅ **Hosted checkout page** (`/checkout/[id]`) — SDK loads this in iframe
@@ -1029,13 +1031,18 @@ ZeroPaye v2.3 **demo + self-host single-merchant ke liye fully production-ready 
 - ✅ **Webhook contract** — HMAC-SHA256, idempotency via delivery_id, retry worker
 - ✅ **4 polyglot webhook snippets** — Node.js, Python, PHP, Go
 - ✅ **`zeropaye.js` SDK** — drop-in script for any website
-- ✅ **70 tests** (51 unit + 19 integration) + GitHub Actions CI
+- ✅ **91 unit tests + 19 integration tests** + GitHub Actions CI (typecheck + lint + test)
 - ✅ **`/health` + `/metrics` endpoints** — for load balancers + Prometheus
 - ✅ **Background workers** — webhook retry, stale-session sweep, heartbeat check
 - ✅ **Graceful shutdown** — SIGTERM/SIGINT handlers
 - ✅ **DB backup script** — `bun run backup`
 - ✅ **PWA manifest** — install as app
 - ✅ **20 SEO pages** + sitemap + robots.txt + JSON-LD structured data
+- ✅ **Reconcile screen** — unmatched bank credits tab + manual attach API
+- ✅ **UNCONFIRMED state** — late SMS doesn't lose money, merchant can reconcile
+- ✅ **Admin key hash** — sha256 stored, never plaintext in API response
+- ✅ **Prisma migrations** — `bun run db:deploy` (no --accept-data-loss)
+- ✅ **Setup CLI** — `bun run setup` for merchant onboarding
 - ✅ **Dark mode + mobile responsive** + accessibility (skip link, focus-visible)
 - ✅ **AGPL-3.0 license**
 
@@ -1048,10 +1055,10 @@ ZeroPaye v2.3 **demo + self-host single-merchant ke liye fully production-ready 
 | **Multi-tenant SaaS mode** | Currently single-merchant per instance | v1.4 |
 | **Recurring/subscriptions** | One-time payments only right now | v1.5 |
 | **DPDP-compliant data retention** | Configurable retention + deletion API | v1.5 |
-| **Native Android Observer APK** | Currently observer setup is documented but APK is separate | v1.5 |
+| **Android Observer APK** | Observer setup documented, APK not yet available. Use Gmail/Manual/CSV options | v1.5 |
 | **In-app invoicing** | GST invoice generation | v1.5 |
 
-> **Bottom line:** ZeroPaye v2.3 ek **complete, production-ready, self-hosted, zero-fee UPI payment gateway** hai. Single-merchant deployments ke liye fully ready. Multi-tenant SaaS scale ke liye v1.4 ka wait karein (Postgres + Redis).
+> **Bottom line:** ZeroPaye v4.0 ek **demo + self-host beta** hai. P0 money bugs fixed, admin hardened, reconcile screen works. Single-merchant production use ke liye: setup CLI chalao, `bun run db:deploy` karo, observer setup karo. Multi-tenant SaaS scale ke liye v1.4 ka wait karein (Postgres + Redis + Ed25519 pairing).
 
 <br/>
 
