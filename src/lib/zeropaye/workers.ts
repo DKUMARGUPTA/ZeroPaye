@@ -208,6 +208,10 @@ async function sweepStaleSessions() {
       await db.$transaction(async (tx) => {
         // v4.0: PROCESSING sessions → UNCONFIRMED (not EXPIRED), so merchant can reconcile
         const newStatus = stale.status === "PROCESSING" ? "UNCONFIRMED" : "EXPIRED";
+        // v4.3: notify merchant about UNCONFIRMED payments
+        if (newStatus === "UNCONFIRMED") {
+          notifyPaymentUnconfirmed(stale.orderId, stale.amountPaise, stale.merchantId).catch(() => {});
+        }
         await tx.paymentSession.update({
           where: { id: stale.id },
           data: { status: newStatus },
@@ -273,6 +277,10 @@ async function checkObserverHeartbeats() {
     });
     if (stale.length === 0) return;
     logger.warn("observer-heartbeat-stale", { count: stale.length });
+    // v4.3: notify merchant about offline observers
+    for (const d of stale) {
+      notifyObserverOffline(d.deviceName || d.id, d.lastHeartbeatAt?.toISOString() || "never", d.merchantId).catch(() => {});
+    }
     // We don't auto-deactivate — just log. Merchant should check the phone.
   } catch (err) {
     logger.error("heartbeat-check-error", { err: String(err).slice(0, 200) });
