@@ -16,6 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { formatINR, formatINRCompact } from "@/lib/zeropaye/money";
+import { AnalyticsCharts } from "./analytics-charts";
 
 interface MerchantData {
   merchant: { businessName: string; publicApiKey: string; branding: any; defaultVpa: string };
@@ -315,6 +316,9 @@ export function Dashboard() {
                           </div>
                         </div>
                       </div>
+
+                      {/* v4.3: Real analytics charts (Recharts) */}
+                      <AnalyticsCharts stats={data.stats} sessions={data.sessions} />
                     </TabsContent>
 
                     {/* VPA tab */}

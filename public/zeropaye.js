@@ -1,5 +1,5 @@
 /*!
- * ZeroPaye Checkout SDK v4.0.0
+ * ZeroPaye Checkout SDK v4.2.0
  * https://github.com/DKUMARGUPTA/ZeroPaye
  *
  * Zero • Empowering • Reliable • Open • Payé
@@ -414,5 +414,5 @@
     window.ZeroPaye.pay(opts);
   });
 
-  console.log("[ZeroPaye] SDK v4.0.0 loaded. API_BASE:", API_BASE);
+  console.log("[ZeroPaye] SDK v4.2.0 loaded. API_BASE:", API_BASE);
 })();
