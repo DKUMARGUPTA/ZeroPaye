@@ -274,7 +274,8 @@ async function checkObserverHeartbeats() {
         isActive: true,
         lastHeartbeatAt: { lt: cutoff },
       },
-      select: { id: true, deviceId: true },
+      // v4.3: select all fields needed for notification
+      select: { id: true, deviceId: true, deviceName: true, lastHeartbeatAt: true, merchantId: true },
     });
     if (stale.length === 0) return;
     logger.warn("observer-heartbeat-stale", { count: stale.length });
