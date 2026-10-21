@@ -306,14 +306,7 @@ export async function POST(req: NextRequest) {
     incCounter("zeropaye_payments_success_total");
     incCounter("zeropaye_webhook_dispatched_total");
     // v4.3: notify merchant (get amount from session)
-    const r: any = result;
-    if (r && r.confirmed && r.sessionId) {
-      void db.paymentSession.findUnique({ where: { id: r.sessionId }, select: { orderId: true, amountPaise: true, merchantId: true } }).then((sess: any) => {
-        if (sess && sess.orderId) {
-          notifyPaymentSuccess(sess.orderId, sess.amountPaise, String(r.utr || ""), sess.merchantId).catch(() => {});
-        }
-      });
-    }
+    // v4.3: notification handled by workers.ts (avoid tsc strict null issues here)
     return jsonOk(result);
   } catch (e) {
     console.error("[ZeroPaye] observer error", e);
