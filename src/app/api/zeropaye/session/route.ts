@@ -11,7 +11,7 @@ import { jsonOk, jsonErr, getClientIp, getUserAgent, getRequestId, rateLimit } f
 import { requireAdmin } from "@/lib/zeropaye/admin-auth";
 import { isValidOrderId, isValidCurrency, getIdempotencyKey } from "@/lib/zeropaye/validation";
 import { isDemoMode, getDemoMerchantData, createDemoSession, findDemoSession, getDemoSessions, updateDemoSession } from "@/lib/zeropaye/demo-data";
-import { incCounter } from "@/lib/zeropaye/metrics/route";
+import { incCounter } from "@/lib/zeropaye/metrics-counters";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

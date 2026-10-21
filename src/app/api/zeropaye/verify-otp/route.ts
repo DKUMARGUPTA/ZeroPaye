@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { verifyOtp } from "@/lib/zeropaye/otp-store";
 import { jsonOk, jsonErr, rateLimit, getClientIp, getUserAgent, getRequestId } from "@/lib/zeropaye/security";
 import { normalizeIndianMobile, isValidIndianMobileStrict } from "@/lib/zeropaye/validation";
-import { incCounter } from "@/lib/zeropaye/metrics/route";
+import { incCounter } from "@/lib/zeropaye/metrics-counters";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

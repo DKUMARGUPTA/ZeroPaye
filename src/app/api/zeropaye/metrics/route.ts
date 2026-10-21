@@ -12,19 +12,8 @@ export const dynamic = "force-dynamic";
 
 const startedAt = Date.now();
 
-// In-process counters (reset on restart — for real prod use Prometheus client)
-const counters: Record<string, number> = {
-  zeropaye_requests_total: 0,
-  zeropaye_otp_sent_total: 0,
-  zeropaye_otp_verified_total: 0,
-  zeropaye_payments_success_total: 0,
-  zeropaye_payments_failed_total: 0,
-  zeropaye_webhook_dispatched_total: 0,
-};
-
-export function incCounter(name: keyof typeof counters, by = 1) {
-  counters[name] = (counters[name] || 0) + by;
-}
+// v4.2: counters extracted to metrics-getCounters().ts (shared import)
+import { getCounters } from "@/lib/zeropaye/metrics-counters";
 
 export async function GET(req: NextRequest) {
   try {
@@ -53,12 +42,12 @@ export async function GET(req: NextRequest) {
       ``,
       `# Process counters (reset on restart)`,
       `# TYPE zeropaye_requests_total counter`,
-      `zeropaye_requests_total ${counters.zeropaye_requests_total}`,
-      `zeropaye_otp_sent_total ${counters.zeropaye_otp_sent_total}`,
-      `zeropaye_otp_verified_total ${counters.zeropaye_otp_verified_total}`,
-      `zeropaye_payments_success_total ${counters.zeropaye_payments_success_total}`,
-      `zeropaye_payments_failed_total ${counters.zeropaye_payments_failed_total}`,
-      `zeropaye_webhook_dispatched_total ${counters.zeropaye_webhook_dispatched_total}`,
+      `zeropaye_requests_total ${getCounters().zeropaye_requests_total}`,
+      `zeropaye_otp_sent_total ${getCounters().zeropaye_otp_sent_total}`,
+      `zeropaye_otp_verified_total ${getCounters().zeropaye_otp_verified_total}`,
+      `zeropaye_payments_success_total ${getCounters().zeropaye_payments_success_total}`,
+      `zeropaye_payments_failed_total ${getCounters().zeropaye_payments_failed_total}`,
+      `zeropaye_webhook_dispatched_total ${getCounters().zeropaye_webhook_dispatched_total}`,
       ``,
       `# DB-backed gauges`,
       `# TYPE zeropaye_sessions gauge`,

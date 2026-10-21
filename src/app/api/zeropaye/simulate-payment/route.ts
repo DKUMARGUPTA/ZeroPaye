@@ -20,7 +20,7 @@ import { jsonOk, jsonErr, getRequestId, getClientIp, isSsrfSafe } from "@/lib/ze
 import { sha256Hex, uuid, hmacSha256 } from "@/lib/zeropaye/crypto";
 import { randomInt } from "node:crypto";
 import { requireAdmin, requireDevMode } from "@/lib/zeropaye/admin-auth";
-import { incCounter } from "@/lib/zeropaye/metrics/route";
+import { incCounter } from "@/lib/zeropaye/metrics-counters";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

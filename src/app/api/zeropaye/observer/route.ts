@@ -17,7 +17,7 @@ import { verifyHmac, sha256Hex, safeEqual, uuid, hmacSha256 } from "@/lib/zeropa
 import { jsonOk, jsonErr, getClientIp, getRequestId, isSsrfSafe } from "@/lib/zeropaye/security";
 import { isValidUtr } from "@/lib/zeropaye/upi";
 import { logger } from "@/lib/zeropaye/workers";
-import { incCounter } from "@/lib/zeropaye/metrics/route";
+import { incCounter } from "@/lib/zeropaye/metrics-counters";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

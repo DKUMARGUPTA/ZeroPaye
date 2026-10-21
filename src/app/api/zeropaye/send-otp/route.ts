@@ -17,7 +17,7 @@ import { issueOtp } from "@/lib/zeropaye/otp-store";
 import { deliverOtp } from "@/lib/zeropaye/otp-provider";
 import { normalizeIndianMobile, isValidIndianMobileStrict } from "@/lib/zeropaye/validation";
 import { jsonOk, jsonErr, rateLimit, getClientIp } from "@/lib/zeropaye/security";
-import { incCounter } from "@/lib/zeropaye/metrics/route";
+import { incCounter } from "@/lib/zeropaye/metrics-counters";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

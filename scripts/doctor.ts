@@ -6,7 +6,7 @@ import { PrismaClient } from "@prisma/client";
 
 const CHECKS = [
   { name: "Node.js version", check: () => process.version >= "v20" ? "✅ " + process.version : "❌ Need Node 20+, got " + process.version },
-  { name: "Bun runtime", check: () => typeof Bun !== "undefined" ? "✅ Bun " + Bun.version : "⚠️ Running on Node (Bun recommended)" },
+  { name: "Bun runtime", check: () => typeof (globalThis as any).Bun !== "undefined" ? "✅ Bun " + (globalThis as any).Bun.version : "⚠️ Running on Node (Bun recommended)" },
   { name: "DATABASE_URL env", check: () => process.env.DATABASE_URL ? "✅ " + process.env.DATABASE_URL.substring(0, 30) + "..." : "❌ Not set" },
   { name: "NODE_ENV", check: () => process.env.NODE_ENV ? "✅ " + process.env.NODE_ENV : "⚠️ Not set (defaults to development)" },
   { name: "DEMO_ADMIN_KEY", check: () => process.env.DEMO_ADMIN_KEY ? "✅ Demo mode (locked)" : "ℹ️ Not set (production mode)" },
