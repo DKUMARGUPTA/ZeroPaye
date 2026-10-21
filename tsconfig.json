@@ -37,6 +37,12 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "skills/**",
+    "examples/**",
+    "tool-results/**",
+    ".zscripts/**",
+    "youpi-extracted/**",
+    "mini-services/**"
   ]
 }

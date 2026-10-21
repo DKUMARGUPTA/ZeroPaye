@@ -3,6 +3,7 @@
 // Returns Prometheus-formatted metrics for monitoring (production gap 6).
 // No external deps — uses in-process counters + DB queries.
 
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { jsonOk, jsonErr } from "@/lib/zeropaye/security";
 

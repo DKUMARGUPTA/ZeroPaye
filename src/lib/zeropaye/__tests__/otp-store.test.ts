@@ -55,7 +55,7 @@ describe("OTP store — verifyOtp", () => {
     const result = verifyOtp("9423456789", "000000");
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.reason).toContain("locked") || expect(result.reason).toContain("Locked");
+      expect(result.reason.toLowerCase()).toContain("lock");
     }
   });
 
